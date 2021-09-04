@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "vfd.h"
 #include "nrf24l01p.h"
+#include "string.h"
 
 /* USER CODE END Includes */
 
@@ -62,23 +63,15 @@ static void MX_I2C1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void set_spi_VFD(void)
-{
-	hspi2.Instance->CR1 |= SPI_CR1_LSBFIRST;
-}
-
-void set_spi_nRF(void)
-{
-	hspi2.Instance->CR1 &= ~(SPI_CR1_LSBFIRST);
-}
-
 void nrf24l01p_spi_ss(nrf24l01p_spi_ss_level_t level)
 {
+	// we will transmit data to nRF, MSB FIRST
 	if (!level)
-		set_spi_nRF();
+		hspi2.Instance->CR1 &= ~(SPI_CR1_LSBFIRST);
 	HAL_GPIO_WritePin(SPI2_nRF_CSn_GPIO_Port, SPI2_nRF_CSn_Pin, level);
+	// we will transmit data to VFD, LSB FIRST
 	if (level)
-		set_spi_VFD();
+		hspi2.Instance->CR1 |= SPI_CR1_LSBFIRST;
 }
 
 uint8_t nrf24l01p_spi_rw(uint8_t value)
@@ -295,7 +288,7 @@ void do_leds(void)
 	}
 	else
 	{
-		vfd_leds(0);
+		//vfd_leds(0);
 	}
 }
 
@@ -376,6 +369,58 @@ void do_fram_test(void)
 }
 
 
+enum
+{
+    NRF_CHANNEL = 123,
+    NRF_POWER_UP_DELAY = 2,
+    NRF_PAYLOAD_LENGTH = 10,
+    NRF_RETRANSMITS = 0,
+
+    #if RF_PAYLOAD_LENGTH <= 18
+        NRF_RETRANSMIT_DELAY = 250
+    #else
+        NRF_RETRANSMIT_DELAY = 500
+    #endif
+};
+
+uint8_t address[5] = { 0x31, 0x41, 0x59, 0x26, 0x56 };
+
+void delay(uint32_t delay)
+{
+	HAL_Delay(delay);
+}
+
+void nrf_init_tx(uint8_t *address)
+{
+    nrf24l01p_get_clear_irq_flags();
+    nrf24l01p_close_pipe(NRF24L01P_ALL);
+    nrf24l01p_open_pipe(NRF24L01P_TX, false);
+    nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
+    nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
+    nrf24l01p_set_address(NRF24L01P_TX, address);
+    nrf24l01p_set_operation_mode(NRF24L01P_PTX);
+    nrf24l01p_set_rf_channel(NRF_CHANNEL);
+
+    nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
+    delay(NRF_POWER_UP_DELAY);
+}
+
+void nrf_init_rx(uint8_t *address)
+{
+    nrf24l01p_get_clear_irq_flags();
+    nrf24l01p_close_pipe(NRF24L01P_ALL);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, false);
+    nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
+    nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
+    nrf24l01p_set_address(NRF24L01P_PIPE0, address);
+    nrf24l01p_set_operation_mode(NRF24L01P_PRX);
+    nrf24l01p_set_rx_payload_width(NRF24L01P_PIPE0, NRF_PAYLOAD_LENGTH);
+    nrf24l01p_set_rf_channel(NRF_CHANNEL);
+
+    nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
+    delay(NRF_POWER_UP_DELAY);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -414,6 +459,9 @@ int main(void)
   uint8_t test;
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
 
+	// hold PB1 to enable tx
+	bool rx = !HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
+
   do_vfd_init();
   test = nrf24l01p_nop();
   if (test == 0b1110)
@@ -421,6 +469,15 @@ int main(void)
 	  str2vfd("NRF24L01+");
 	  vfd_update();
   }
+
+  if (rx)
+  {
+	  nrf_init_rx(address);
+	  // enable read
+	  HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 1);
+  }
+  else
+	  nrf_init_tx(address);
 
   /* USER CODE END 2 */
 
@@ -433,6 +490,62 @@ int main(void)
 
 	  if (HAL_GetTick() > 10*60*1000)
 		  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
+
+	  static uint32_t last_time = 0;
+	  if (HAL_GetTick() - last_time > (rx?110:100))
+	  {
+		  if (rx)
+		  {
+			  if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_RX_DR))
+			  {
+				  nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_RX_DR);
+
+				  uint8_t payload[NRF_PAYLOAD_LENGTH];
+
+				  while (!nrf24l01p_rx_fifo_empty())
+					  nrf24l01p_read_rx_payload(payload);
+
+				 if (payload[0] == 1)
+				 {
+					 vfd_leds(0b0100);
+					 str2vfd("RX PB1");
+					 vfd_update();
+				 }
+				 else
+				 {
+					 vfd_leds(0b0010);
+					 str2vfd("RX PB2");
+					 vfd_update();
+				 }
+
+			  }
+			  else
+			  {
+				  vfd_leds(0b0000);
+			  }
+		  }
+		  else
+		  {
+			bool PB1 = HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
+			bool PB2 = HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin);
+			if (PB1 || PB2)
+			{
+				static uint8_t payload[NRF_PAYLOAD_LENGTH];
+				memset(payload, 0x44, sizeof(payload));
+				payload[0] = PB1;
+				nrf24l01p_write_tx_payload(payload, sizeof(payload));
+
+				HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 1);
+				HAL_Delay(1);
+				HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
+
+				do {} while (!(nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_TX_DS)));
+				nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_TX_DS);
+			}
+
+		  }
+		  last_time = HAL_GetTick();
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -1,0 +1,6 @@
+vfd.c:175:10:get_char	24	static
+vfd.c:195:6:str2vfd	24	static
+vfd.c:215:6:symbols_vfd	32	static
+vfd.c:234:6:clr_vfd	16	static
+vfd.c:242:6:save_vfd	16	static
+vfd.c:248:6:restore_vfd	16	static

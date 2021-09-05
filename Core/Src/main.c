@@ -85,13 +85,17 @@ uint8_t nrf24l01p_spi_rw(uint8_t value)
 	return data;
 }
 
-void vfd_update(void) {
-	uint8_t data = 0b11000000; // command 3, set address to 0
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
+void vfd_spi_cs(vfd_cs_t cs)
+{
+	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, cs);
 }
+
+void vfd_spi_tx(uint8_t *pData, uint16_t Size)
+{
+	HAL_SPI_Transmit(&hspi2, pData, Size, 100);
+}
+
 
 void do_microrl(void)
 {
@@ -102,7 +106,7 @@ void do_microrl(void)
 void do_vfd_init(void)
 {
 #define FULL_DEMO (0)
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1); // put CS high
+	vfd_spi_cs(VFD_CS_HIGH);
 
 	HAL_Delay(10);
 	HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
@@ -112,15 +116,7 @@ void do_vfd_init(void)
 	}
 	uint8_t data;
 
-	data = 0b01000001; // command 2, write to LED port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_Delay(10);
-
-	data = 0b1111; // disable LEDs
-
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	vfd_leds(0); // disable leds
 	HAL_Delay(10);
 
 	//write twice, some strange problem with SPI init
@@ -185,7 +181,7 @@ void do_vfd_init(void)
 
 
 	//erase everything... just in case
-	clr_vfd();
+	vfd_clear_buf();
 
 	data = 0b10000000; // command 4
 	data |= 1 << 3; // enable/disable display
@@ -243,20 +239,10 @@ void do_vfd_init(void)
 		do_microrl();
 	}
 
-	HAL_Delay(300);
+	HAL_Delay(500);
+	vfd_clear_buf();
 }
 
-void vfd_leds(uint8_t leds)
-{
-	uint8_t data = 0b01000001; // command 2, write to LED port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-
-	data = (~leds)&0b1111;
-
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-}
 
 void do_test_buttons(void)
 {
@@ -269,13 +255,13 @@ void do_test_buttons(void)
 		if (PB1)
 		{
 			vfd_leds(0b0100);
-			str2vfd("PB1 OKAY");
+			vfd_put_string("PB1 OKAY");
 			vfd_update();
 		}
 		else
 		{
 			vfd_leds(0b0010);
-			str2vfd("PB2 OKAY");
+			vfd_put_string("PB2 OKAY");
 			vfd_update();
 		}
 	}
@@ -316,7 +302,7 @@ void do_fram_test(void)
 	if (PB1 && PB2)
 	{
 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0); // turn led on
-		str2vfd("FRAM TEST");
+		vfd_put_string("FRAM TEST");
 		vfd_update();
 		for (int i = 0; i < 3; i++)
 		{
@@ -328,7 +314,7 @@ void do_fram_test(void)
 		if (read())
 		{
 			vfd_leds(0b0100);
-			str2vfd("FRAM FOUND");
+			vfd_put_string("FRAM FOUND");
 			vfd_update();
 		}
 		else
@@ -339,13 +325,13 @@ void do_fram_test(void)
 			if (read())
 			{
 				vfd_leds(0b0011);
-				str2vfd("FRAM OKAY");
+				vfd_put_string("FRAM OKAY");
 				vfd_update();
 			}
 			else
 			{
 				vfd_leds(0b1000);
-				str2vfd("NO FRAM!");
+				vfd_put_string("NO FRAM!");
 				vfd_update();
 			}
 		}
@@ -471,18 +457,17 @@ int main(void)
 
   do_vfd_init();
   test = nrf24l01p_nop();
-  clr_vfd();
   if (test == 0b1110)
   {
-	  str2vfd("NRF24L01+");
-	  symbols_vfd(1<<17);
+	  vfd_put_string("NRF24L01+");
+	  vfd_set_symbols(VFD_SYM_DIGITAL);
 	  if (!rx)
-		  symbols_vfd(1<<18);
+		  vfd_set_symbols(VFD_SYM_ANALOG);
   }
   else
   {
 	  rx = true;
-	  str2vfd("NO NRF");
+	  vfd_put_string("NO NRF");
   }
   vfd_update();
 
@@ -527,13 +512,15 @@ int main(void)
 				 if (payload[0] == 1)
 				 {
 					 vfd_leds(0b0100);
-					 str2vfd("RX PB1");
+					 vfd_put_string("RX PB1");
+					 vfd_set_symbols(VFD_SYM_ARROW_LEFT);
 					 vfd_update();
 				 }
 				 else
 				 {
 					 vfd_leds(0b0010);
-					 str2vfd("RX PB2");
+					 vfd_put_string("RX PB2");
+					 vfd_set_symbols(VFD_SYM_ARROW_RIGHT);
 					 vfd_update();
 				 }
 
@@ -559,12 +546,12 @@ int main(void)
 				if (PB1)
 				{
 					vfd_leds(0b0100);
-					str2vfd("PB1 TX");
+					vfd_put_string("PB1 TX");
 				}
 				else
 				{
 					vfd_leds(0b0010);
-					str2vfd("PB2 TX");
+					vfd_put_string("PB2 TX");
 				}
 				vfd_update();
 
@@ -580,7 +567,7 @@ int main(void)
 						// not send
 						vfd_leds(0b1000);
 						nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
-						str2vfd("TX ERROR");
+						vfd_put_string("TX ERROR");
 						vfd_update();
 						while(PB1||PB2);
 						break;
@@ -597,7 +584,12 @@ int main(void)
 			  last_active_time = HAL_GetTick();
 
 		  if (HAL_GetTick() - last_active_time > 100)
+		  {
 			  vfd_leds(0);
+			  vfd_clr_symbols(VFD_SYM_ARROW_LEFT);
+			  vfd_clr_symbols(VFD_SYM_ARROW_RIGHT);
+			  vfd_update();
+		  }
 
 		  if (HAL_GetTick() - last_active_time > 10000)
 			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
@@ -609,7 +601,7 @@ int main(void)
 				  char buf [11];
 				  memset(buf, '\0', sizeof(buf));
 				  memset(buf, '_', 10-((HAL_GetTick() - last_active_time)/1000));
-				  str2vfd(buf);
+				  vfd_put_string(buf);
 				  vfd_update();
 			  }
 		  }

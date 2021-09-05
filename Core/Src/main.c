@@ -63,6 +63,10 @@ static void MX_I2C1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+#define PB1 (HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin))
+#define PB2 (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
+
+
 void nrf24l01p_spi_ss(nrf24l01p_spi_ss_level_t level)
 {
 	// we will transmit data to nRF, MSB FIRST
@@ -240,10 +244,6 @@ void do_vfd_init(void)
 	}
 
 	HAL_Delay(300);
-
-	str2vfd("TEST BOARD");
-
-	vfd_update();
 }
 
 void vfd_leds(uint8_t leds)
@@ -258,38 +258,36 @@ void vfd_leds(uint8_t leds)
 	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
 }
 
-void do_leds(void)
+void do_test_buttons(void)
 {
 	static uint32_t last_time = 0;
-	static uint8_t tick_counter = 0;
-	if (HAL_GetTick() - last_time < 500)
+	if (HAL_GetTick() - last_time < 100)
 		return;
 	last_time = HAL_GetTick();
-	HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-	bool PB1 = HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
-	bool PB2 = HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin);
 	if (PB1 || PB2)
 	{
-		vfd_leds((1<<((tick_counter >> 1)&0b11)));
 		if (PB1)
 		{
-			tick_counter++;
-			clr_vfd();
+			vfd_leds(0b0100);
 			str2vfd("PB1 OKAY");
 			vfd_update();
 		}
 		else
 		{
-			tick_counter--;
-			clr_vfd();
+			vfd_leds(0b0010);
 			str2vfd("PB2 OKAY");
 			vfd_update();
 		}
 	}
-	else
-	{
-		//vfd_leds(0);
-	}
+}
+
+void do_led(void)
+{
+	static uint32_t last_time = 0;
+	if (HAL_GetTick() - last_time < 500)
+		return;
+	last_time = HAL_GetTick();
+	HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 }
 
 void do_fram_test(void)
@@ -315,17 +313,21 @@ void do_fram_test(void)
 	static uint32_t last_time = 0;
 	if (HAL_GetTick() - last_time < 200)
 		return;
-	bool PB1 = HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
-	bool PB2 = HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin);
 	if (PB1 && PB2)
 	{
 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0); // turn led on
+		str2vfd("FRAM TEST");
+		vfd_update();
+		for (int i = 0; i < 3; i++)
+		{
+			vfd_leds(~(1<<i));
+			HAL_Delay(250);
+		}
 		vfd_leds(0b1111);
 		HAL_Delay(500);
 		if (read())
 		{
 			vfd_leds(0b0100);
-			clr_vfd();
 			str2vfd("FRAM FOUND");
 			vfd_update();
 		}
@@ -337,21 +339,19 @@ void do_fram_test(void)
 			if (read())
 			{
 				vfd_leds(0b0011);
-				clr_vfd();
 				str2vfd("FRAM OKAY");
 				vfd_update();
 			}
 			else
 			{
 				vfd_leds(0b1000);
-				clr_vfd();
 				str2vfd("NO FRAM!");
 				vfd_update();
 			}
 		}
 
-		while(HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin));
-		if (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
+		while(PB1);
+		if (PB2)
 		{
 			// PB2 still pressed, erase RAM
 			vfd_leds(0b1001);
@@ -362,7 +362,7 @@ void do_fram_test(void)
 			HAL_I2C_Mem_Write(&hi2c1, 0b10100010, 0, 1, zero, sizeof(zero), 200);
 			HAL_Delay(500);
 			vfd_leds(0b1010);
-			while (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin));
+			while (PB2);
 		}
 	}
 	last_time = HAL_GetTick();
@@ -374,7 +374,7 @@ enum
     NRF_CHANNEL = 123,
     NRF_POWER_UP_DELAY = 2,
     NRF_PAYLOAD_LENGTH = 10,
-    NRF_RETRANSMITS = 0,
+    NRF_RETRANSMITS = 5,
 
     #if RF_PAYLOAD_LENGTH <= 18
         NRF_RETRANSMIT_DELAY = 250
@@ -394,7 +394,12 @@ void nrf_init_tx(uint8_t *address)
 {
     nrf24l01p_get_clear_irq_flags();
     nrf24l01p_close_pipe(NRF24L01P_ALL);
-    nrf24l01p_open_pipe(NRF24L01P_TX, false);
+    nrf24l01p_open_pipe(NRF24L01P_TX, true);
+
+    nrf24l01p_set_auto_retr(NRF_RETRANSMITS, NRF_RETRANSMIT_DELAY);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
+    nrf24l01p_set_address(NRF24L01P_PIPE0, address);
+
     nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
     nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
     nrf24l01p_set_address(NRF24L01P_TX, address);
@@ -409,7 +414,7 @@ void nrf_init_rx(uint8_t *address)
 {
     nrf24l01p_get_clear_irq_flags();
     nrf24l01p_close_pipe(NRF24L01P_ALL);
-    nrf24l01p_open_pipe(NRF24L01P_PIPE0, false);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
     nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
     nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
     nrf24l01p_set_address(NRF24L01P_PIPE0, address);
@@ -460,17 +465,26 @@ int main(void)
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
 
 	// hold PB1 to enable tx
-	bool rx = !HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
+	bool rx = !PB1;
 	if (!rx)
 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
   do_vfd_init();
   test = nrf24l01p_nop();
+  clr_vfd();
   if (test == 0b1110)
   {
 	  str2vfd("NRF24L01+");
-	  vfd_update();
+	  symbols_vfd(1<<17);
+	  if (!rx)
+		  symbols_vfd(1<<18);
   }
+  else
+  {
+	  rx = true;
+	  str2vfd("NO NRF");
+  }
+  vfd_update();
 
   if (rx)
   {
@@ -485,15 +499,15 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  uint32_t last_active_time = HAL_GetTick();
   while (1)
   {
-	  do_leds();
+	  if (rx)
+		  do_test_buttons();
+	  do_led();
 	  do_fram_test();
 
-	  static uint32_t last_active_time = 0;
-
-		bool PB1 = HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
-		bool PB2 = HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin);
 
 	  static uint32_t last_time = 0;
 	  if (HAL_GetTick() - last_time > (rx?110:100))
@@ -542,8 +556,38 @@ int main(void)
 				HAL_Delay(1);
 				HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
 
-				do {} while (!(nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_TX_DS)));
-				nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_TX_DS);
+				if (PB1)
+				{
+					vfd_leds(0b0100);
+					str2vfd("PB1 TX");
+				}
+				else
+				{
+					vfd_leds(0b0010);
+					str2vfd("PB2 TX");
+				}
+				vfd_update();
+
+				do {
+					if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_TX_DS))
+					{
+						//successfully transmitted
+						nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_TX_DS);
+						break;
+					}
+					if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_MAX_RT))
+					{
+						// not send
+						vfd_leds(0b1000);
+						nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
+						str2vfd("TX ERROR");
+						vfd_update();
+						while(PB1||PB2);
+						break;
+					}
+
+				} while (1);
+				  last_active_time = HAL_GetTick();
 			}
 
 		  }
@@ -558,7 +602,17 @@ int main(void)
 		  if (HAL_GetTick() - last_active_time > 10000)
 			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
 		  else
+		  {
 			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
+			  if (HAL_GetTick() - last_active_time > 3000)
+			  {
+				  char buf [11];
+				  memset(buf, '\0', sizeof(buf));
+				  memset(buf, '_', 10-((HAL_GetTick() - last_active_time)/1000));
+				  str2vfd(buf);
+				  vfd_update();
+			  }
+		  }
 
 		  last_time = HAL_GetTick();
 	  }

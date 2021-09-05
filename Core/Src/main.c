@@ -461,6 +461,8 @@ int main(void)
 
 	// hold PB1 to enable tx
 	bool rx = !HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
+	if (!rx)
+		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
   do_vfd_init();
   test = nrf24l01p_nop();
@@ -488,8 +490,10 @@ int main(void)
 	  do_leds();
 	  do_fram_test();
 
-	  if (HAL_GetTick() > 10*60*1000)
-		  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
+	  static uint32_t last_active_time = 0;
+
+		bool PB1 = HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
+		bool PB2 = HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin);
 
 	  static uint32_t last_time = 0;
 	  if (HAL_GetTick() - last_time > (rx?110:100))
@@ -498,6 +502,7 @@ int main(void)
 		  {
 			  if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_RX_DR))
 			  {
+				  last_active_time = HAL_GetTick();
 				  nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_RX_DR);
 
 				  uint8_t payload[NRF_PAYLOAD_LENGTH];
@@ -521,13 +526,11 @@ int main(void)
 			  }
 			  else
 			  {
-				  vfd_leds(0b0000);
+				  //vfd_leds(0b0000);
 			  }
 		  }
 		  else
 		  {
-			bool PB1 = HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
-			bool PB2 = HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin);
 			if (PB1 || PB2)
 			{
 				static uint8_t payload[NRF_PAYLOAD_LENGTH];
@@ -544,6 +547,19 @@ int main(void)
 			}
 
 		  }
+
+
+		  if (PB1 || PB2)
+			  last_active_time = HAL_GetTick();
+
+		  if (HAL_GetTick() - last_active_time > 100)
+			  vfd_leds(0);
+
+		  if (HAL_GetTick() - last_active_time > 10000)
+			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
+		  else
+			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
+
 		  last_time = HAL_GetTick();
 	  }
     /* USER CODE END WHILE */

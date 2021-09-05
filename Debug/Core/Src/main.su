@@ -12,8 +12,8 @@ main.c:388:6:delay	16	static
 main.c:393:6:nrf_init_tx	16	static
 main.c:408:6:nrf_init_rx	16	static
 main.c:430:5:main	24	static
-main.c:560:6:SystemClock_Config	72	static
-main.c:599:13:MX_I2C1_Init	8	static
-main.c:633:13:MX_SPI2_Init	8	static
-main.c:671:13:MX_GPIO_Init	40	static
-main.c:730:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:576:6:SystemClock_Config	72	static
+main.c:615:13:MX_I2C1_Init	8	static
+main.c:649:13:MX_SPI2_Init	8	static
+main.c:687:13:MX_GPIO_Init	40	static
+main.c:746:6:Error_Handler	4	static,ignoring_inline_asm

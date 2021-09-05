@@ -461,6 +461,8 @@ int main(void)
 
 	// hold PB1 to enable tx
 	bool rx = !HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
+	if (!rx)
+		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
   do_vfd_init();
   test = nrf24l01p_nop();
@@ -521,7 +523,7 @@ int main(void)
 			  }
 			  else
 			  {
-				  vfd_leds(0b0000);
+				  //vfd_leds(0b0000);
 			  }
 		  }
 		  else

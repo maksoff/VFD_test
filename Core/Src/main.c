@@ -261,26 +261,23 @@ void vfd_leds(uint8_t leds)
 void do_leds(void)
 {
 	static uint32_t last_time = 0;
-	static uint8_t tick_counter = 0;
-	if (HAL_GetTick() - last_time < 500)
+	if (HAL_GetTick() - last_time < 100)
 		return;
 	last_time = HAL_GetTick();
-	HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	bool PB1 = HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin);
 	bool PB2 = HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin);
 	if (PB1 || PB2)
 	{
-		vfd_leds((1<<((tick_counter >> 1)&0b11)));
 		if (PB1)
 		{
-			tick_counter++;
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 			clr_vfd();
 			str2vfd("PB1 OKAY");
 			vfd_update();
 		}
 		else
 		{
-			tick_counter--;
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
 			clr_vfd();
 			str2vfd("PB2 OKAY");
 			vfd_update();
@@ -288,7 +285,12 @@ void do_leds(void)
 	}
 	else
 	{
-		//vfd_leds(0);
+		static uint8_t tick = 0;
+		if (++tick>5)
+		{
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+			tick = 0;
+		}
 	}
 }
 
@@ -320,6 +322,13 @@ void do_fram_test(void)
 	if (PB1 && PB2)
 	{
 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0); // turn led on
+		str2vfd("FRAM TEST");
+		vfd_update();
+		for (int i = 0; i < 3; i++)
+		{
+			vfd_leds(~(1<<i));
+			HAL_Delay(250);
+		}
 		vfd_leds(0b1111);
 		HAL_Delay(500);
 		if (read())
@@ -374,7 +383,7 @@ enum
     NRF_CHANNEL = 123,
     NRF_POWER_UP_DELAY = 2,
     NRF_PAYLOAD_LENGTH = 10,
-    NRF_RETRANSMITS = 0,
+    NRF_RETRANSMITS = 5,
 
     #if RF_PAYLOAD_LENGTH <= 18
         NRF_RETRANSMIT_DELAY = 250
@@ -394,7 +403,12 @@ void nrf_init_tx(uint8_t *address)
 {
     nrf24l01p_get_clear_irq_flags();
     nrf24l01p_close_pipe(NRF24L01P_ALL);
-    nrf24l01p_open_pipe(NRF24L01P_TX, false);
+    nrf24l01p_open_pipe(NRF24L01P_TX, true);
+
+    nrf24l01p_set_auto_retr(NRF_RETRANSMITS, NRF_RETRANSMIT_DELAY);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
+    nrf24l01p_set_address(NRF24L01P_PIPE0, address);
+
     nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
     nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
     nrf24l01p_set_address(NRF24L01P_TX, address);
@@ -409,7 +423,7 @@ void nrf_init_rx(uint8_t *address)
 {
     nrf24l01p_get_clear_irq_flags();
     nrf24l01p_close_pipe(NRF24L01P_ALL);
-    nrf24l01p_open_pipe(NRF24L01P_PIPE0, false);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
     nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
     nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
     nrf24l01p_set_address(NRF24L01P_PIPE0, address);

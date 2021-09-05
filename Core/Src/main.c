@@ -240,10 +240,6 @@ void do_vfd_init(void)
 	}
 
 	HAL_Delay(300);
-
-	str2vfd("TEST BOARD");
-
-	vfd_update();
 }
 
 void vfd_leds(uint8_t leds)
@@ -271,14 +267,12 @@ void do_leds(void)
 		if (PB1)
 		{
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
-			clr_vfd();
 			str2vfd("PB1 OKAY");
 			vfd_update();
 		}
 		else
 		{
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
-			clr_vfd();
 			str2vfd("PB2 OKAY");
 			vfd_update();
 		}
@@ -334,7 +328,6 @@ void do_fram_test(void)
 		if (read())
 		{
 			vfd_leds(0b0100);
-			clr_vfd();
 			str2vfd("FRAM FOUND");
 			vfd_update();
 		}
@@ -346,14 +339,12 @@ void do_fram_test(void)
 			if (read())
 			{
 				vfd_leds(0b0011);
-				clr_vfd();
 				str2vfd("FRAM OKAY");
 				vfd_update();
 			}
 			else
 			{
 				vfd_leds(0b1000);
-				clr_vfd();
 				str2vfd("NO FRAM!");
 				vfd_update();
 			}
@@ -480,11 +471,19 @@ int main(void)
 
   do_vfd_init();
   test = nrf24l01p_nop();
+  clr_vfd();
   if (test == 0b1110)
   {
 	  str2vfd("NRF24L01+");
-	  vfd_update();
+	  symbols_vfd(1<<17);
+	  if (!rx)
+		  symbols_vfd(1<<18);
   }
+  else
+  {
+	  str2vfd("TEST BOARD");
+  }
+  vfd_update();
 
   if (rx)
   {

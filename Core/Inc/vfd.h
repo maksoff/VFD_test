@@ -22,6 +22,9 @@ void vfd_spi_tx(uint8_t *pData, uint16_t Size);
 void vfd_update(void);
 void vfd_leds(uint8_t leds);
 
+void vfd_init(void);
+void vfd_control(bool enable, uint8_t dimm);
+
 uint16_t _vfd_get_char_code(char input);
 void vfd_put_string(char * str);
 void vfd_clear_buf(void);
@@ -47,6 +50,49 @@ union VFD {
 	  uint8_t arr2[11][3];
 	  uint8_t arr1[11*3];
 } vfd;
+
+// VFD Commands
+enum {
+	VFD_COM_DISPLAY_MODE_SETTING = 0b00 << 6, // sets digits/segments
+	VFD_COM_DATA_SETTING		 = 0b01 << 6, // should be leds or data be written
+	VFD_COM_ADDRESS_SETTING		 = 0b11 << 6, // select address where to write
+	VFD_COM_DISPLAY_CONTROL		 = 0b10 << 6  // enable/disable display and set dimming
+};
+
+// DISPLAY MODE SETTING
+enum {
+	VFD_DMS_04dig_24seg,
+	VFD_DMS_05dig_23seg,
+	VFD_DMS_06dig_22seg,
+	VFD_DMS_07dig_21seg,
+	VFD_DMS_08dig_20seg,
+	VFD_DMS_09dig_19seg,
+	VFD_DMS_10dig_18seg,
+	VFD_DMS_11dig_17seg,
+	VFD_DMS_12dig_16seg
+};
+
+// DATA SETTING
+enum {
+	VFD_DS_TEST_MODE = 1<<3,
+	VFD_DS_FIX_ADDR  = 1<<2,
+	VFD_DS_WRITE_DISP = 0,
+	VFD_DS_WRITE_LED = 1,
+	VFD_DS_READ_KEY = 2, // not implemented
+};
+
+// display control
+enum {
+	VFD_DC_DIMM_01_16,
+	VFD_DC_DIMM_02_16,
+	VFD_DC_DIMM_04_16,
+	VFD_DC_DIMM_10_16,
+	VFD_DC_DIMM_11_16,
+	VFD_DC_DIMM_12_16,
+	VFD_DC_DIMM_13_16,
+	VFD_DC_DIMM_14_16,
+	VFD_DC_DISP_ON = 1 << 3,
+};
 
 enum {
 	VFD_SYM_ARROW1  = 1<<0,

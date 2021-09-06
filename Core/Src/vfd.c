@@ -165,10 +165,10 @@ const uint8_t _VFD_MAP_SYMBOLS [][2] = {  {1, 16}, // 00 // right <
 							   {10, 15},	// <
 		    				   {0, 0}, // digital
 							   {0, 1}, // analog
-							   {0, 4}, // )
+							   {0, 2}, // )
 							   {0, 3}, // (
-							   {0, 5}, // <-
-							   {0, 2}, // ->
+							   {0, 4}, // <-
+							   {0, 5}, // ->
 							   {0, 6}, // dcc
 							   {6, 0}, // :
 };
@@ -310,10 +310,17 @@ void vfd_restore_backup(void)
  * update data on VFD display
  */
 void vfd_update(void) {
-	uint8_t data = 0b11000000; // command 3, set address to 0
+	uint8_t data;
+
 	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_DATA_SETTING|VFD_DS_WRITE_DISP; // command 2, write display
 	vfd_spi_tx(&data, 1);
-	vfd_spi_tx(vfd.arr1, sizeof(vfd.arr1));
+	vfd_spi_cs(VFD_CS_HIGH);
+
+	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_ADDRESS_SETTING; // command 3, set address to 0
+	vfd_spi_tx(&data, 1);
+	vfd_spi_tx(vfd.arr1, sizeof(vfd.arr1)); // transmit data
 	vfd_spi_cs(VFD_CS_HIGH);
 }
 
@@ -322,10 +329,37 @@ void vfd_update(void) {
  */
 void vfd_leds(uint8_t leds)
 {
-	uint8_t data = 0b01000001; // command 2, write to LED port
+	uint8_t data = VFD_COM_DATA_SETTING|VFD_DS_WRITE_LED; // command 2, write to LED port
 	vfd_spi_cs(VFD_CS_LOW);
 	vfd_spi_tx(&data, 1);
 	data = (~leds)&0b1111;
+	vfd_spi_tx(&data, 1);
+	vfd_spi_cs(VFD_CS_HIGH);
+}
+
+/**
+ * sets correct grid & segments count
+ */
+void vfd_init(void)
+{
+	uint8_t data;
+
+	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_DISPLAY_MODE_SETTING|VFD_DMS_11dig_17seg; // command 2, write display
+	vfd_spi_tx(&data, 1);
+	vfd_spi_cs(VFD_CS_HIGH);
+
+}
+
+/**
+ * enable/disable display and set dimming (0..7)
+ */
+void vfd_control(bool enable, uint8_t dimm)
+{
+	uint8_t data;
+
+	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_DISPLAY_CONTROL|(enable?VFD_DC_DISP_ON:0)|(dimm&0b111); // command 4
 	vfd_spi_tx(&data, 1);
 	vfd_spi_cs(VFD_CS_HIGH);
 }

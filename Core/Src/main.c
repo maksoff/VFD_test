@@ -105,63 +105,26 @@ void do_microrl(void)
 
 void do_vfd_init(void)
 {
-#define FULL_DEMO (0)
+#define FULL_DEMO (1)
 	vfd_spi_cs(VFD_CS_HIGH);
-
-	HAL_Delay(10);
 	HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
+	HAL_Delay(10);
+
+	vfd_init(); // init display, 11 digits 17 segments
+	vfd_leds(0); // disable leds
 
 	for (int i = 0; i < sizeof(vfd.arr1); i++) {
 		vfd.arr1[i] = 0xFF;
 	}
-	uint8_t data;
 
-	vfd_leds(0); // disable leds
-	HAL_Delay(10);
-
-	//write twice, some strange problem with SPI init
-
-	data = 0b01000001; // command 2, write to LED port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_Delay(10);
-
-	data = 0b1111; // disable LEDs
-
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
-
-	data = 0b01000000; // command 2, write to Display port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
 	vfd_update();
-	HAL_Delay(10);
-	// init display, 11 digits 17 segments
-	data = 0b00000111; // command 1, 11 digits 17 segments
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
-	data = 0b10000000; // command 4
-	data |= 1 << 3; // enable/disable display
-	data |= 0b111; // set brightness
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	vfd_control(true, 0b111);
 
 	if(FULL_DEMO)
 	{
-
+		// change brightness
 		for (uint8_t i = 0; i <= 0b111; i++) {
-			data = 0b10000000; // command 4
-			data |= 1 << 3; // enable/disable display
-			data |= i; // set brightness
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-			HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+			vfd_control(true, i);
 			HAL_Delay(250);
 			do_microrl();
 		}
@@ -179,16 +142,8 @@ void do_vfd_init(void)
 		do_microrl();
 	}
 
-
 	//erase everything... just in case
 	vfd_clear_buf();
-
-	data = 0b10000000; // command 4
-	data |= 1 << 3; // enable/disable display
-	data |= 0b111; // set max brightness
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
 
 	// fill everything
 	for (int j = 1; j < 15; j++) {
@@ -203,44 +158,33 @@ void do_vfd_init(void)
 		do_microrl();
 	}
 
-	const uint8_t arr[][2] = {
-			{ 6, 0 },
-			{ 0, 0 },
-			{ 0, 1 },
-			{ 0, 4 },
-			{ 0, 3 },
-			{ 0, 5 },
-			{ 0, 2 },
-			{ 0, 6 },
-			{ 1, 16 },
-			{ 1, 15 },
-			{ 2, 16 },
-			{ 2, 15 },
-			{ 3, 16 },
-			{ 3, 15 },
-			{ 4, 16 },
-			{ 4, 15 },
-			{ 5, 16 },
-			{ 5, 15 },
-			{ 6, 16 },
-			{ 6, 15 },
-			{ 8, 16 },
-			{ 8, 15 },
-			{ 9, 16 },
-			{ 10, 16 },
-			{ 10, 15 },
+	const uint32_t arr[] = {
+			VFD_SYM_COLON,
+			VFD_SYM_DIGITAL,
+			VFD_SYM_ANALOG,
+			VFD_SYM_BRACKET_RIGHT,
+			VFD_SYM_SMALL_ARROW_LEFT,
+			VFD_SYM_BRACKET_LEFT,
+			VFD_SYM_SMALL_ARROW_RIGHT,
+			VFD_SYM_DCC,
 	};
 
-	for (int j = 0; j < sizeof(arr) / 2; j++) {
-		for (int b = 0; b < 3; b++)
-			vfd.arr2[arr[j][0]][b] |= ((1 << arr[j][1]) >> (b << 3)) & 0xFF;
+	for (int j = 0; j < sizeof(arr)/sizeof(arr[0]); j++) {
+		vfd_set_symbols(arr[j]);
 		vfd_update();
 		HAL_Delay(50);
 		do_microrl();
 	}
 
-	HAL_Delay(500);
+	for (int j = 0; j < 17; j++) {
+		vfd_set_symbols(1<<j);
+		vfd_update();
+		HAL_Delay(50);
+		do_microrl();
+	}
+
 	vfd_clear_buf();
+	HAL_Delay(500);
 }
 
 

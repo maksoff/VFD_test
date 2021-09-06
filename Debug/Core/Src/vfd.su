@@ -7,4 +7,6 @@ vfd.c:285:6:vfd_clear_buf	16	static
 vfd.c:294:6:vfd_store_backup	16	static
 vfd.c:303:6:vfd_restore_backup	16	static
 vfd.c:312:6:vfd_update	16	static
-vfd.c:323:6:vfd_leds	24	static
+vfd.c:330:6:vfd_leds	24	static
+vfd.c:343:6:vfd_init	16	static
+vfd.c:357:6:vfd_control	24	static

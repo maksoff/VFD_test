@@ -119,19 +119,6 @@ void do_vfd_init(void)
 	vfd_leds(0); // disable leds
 	HAL_Delay(10);
 
-	//write twice, some strange problem with SPI init
-
-	data = 0b01000001; // command 2, write to LED port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_Delay(10);
-
-	data = 0b1111; // disable LEDs
-
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
-
 	data = 0b01000000; // command 2, write to Display port
 	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
 	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);

@@ -107,28 +107,22 @@ void do_vfd_init(void)
 {
 #define FULL_DEMO (1)
 	vfd_spi_cs(VFD_CS_HIGH);
-
-	HAL_Delay(10);
 	HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
-
-	uint8_t data;
+	HAL_Delay(10);
 
 	vfd_init(); // init display, 11 digits 17 segments
-
 	vfd_leds(0); // disable leds
-	HAL_Delay(10);
 
 	for (int i = 0; i < sizeof(vfd.arr1); i++) {
 		vfd.arr1[i] = 0xFF;
 	}
-	vfd_update();
 
-	HAL_Delay(10);
+	vfd_update();
 	vfd_control(true, 0b111);
 
 	if(FULL_DEMO)
 	{
-
+		// change brightness
 		for (uint8_t i = 0; i <= 0b111; i++) {
 			vfd_control(true, i);
 			HAL_Delay(250);
@@ -148,7 +142,6 @@ void do_vfd_init(void)
 		do_microrl();
 	}
 
-
 	//erase everything... just in case
 	vfd_clear_buf();
 
@@ -165,44 +158,33 @@ void do_vfd_init(void)
 		do_microrl();
 	}
 
-	const uint8_t arr[][2] = {
-			{ 6, 0 },
-			{ 0, 0 },
-			{ 0, 1 },
-			{ 0, 4 },
-			{ 0, 3 },
-			{ 0, 5 },
-			{ 0, 2 },
-			{ 0, 6 },
-			{ 1, 16 },
-			{ 1, 15 },
-			{ 2, 16 },
-			{ 2, 15 },
-			{ 3, 16 },
-			{ 3, 15 },
-			{ 4, 16 },
-			{ 4, 15 },
-			{ 5, 16 },
-			{ 5, 15 },
-			{ 6, 16 },
-			{ 6, 15 },
-			{ 8, 16 },
-			{ 8, 15 },
-			{ 9, 16 },
-			{ 10, 16 },
-			{ 10, 15 },
+	const uint32_t arr[] = {
+			VFD_SYM_COLON,
+			VFD_SYM_DIGITAL,
+			VFD_SYM_ANALOG,
+			VFD_SYM_BRACKET_RIGHT,
+			VFD_SYM_SMALL_ARROW_LEFT,
+			VFD_SYM_BRACKET_LEFT,
+			VFD_SYM_SMALL_ARROW_RIGHT,
+			VFD_SYM_DCC,
 	};
 
-	for (int j = 0; j < sizeof(arr) / 2; j++) {
-		for (int b = 0; b < 3; b++)
-			vfd.arr2[arr[j][0]][b] |= ((1 << arr[j][1]) >> (b << 3)) & 0xFF;
+	for (int j = 0; j < sizeof(arr)/sizeof(arr[0]); j++) {
+		vfd_set_symbols(arr[j]);
 		vfd_update();
 		HAL_Delay(50);
 		do_microrl();
 	}
 
-	HAL_Delay(500);
+	for (int j = 0; j < 17; j++) {
+		vfd_set_symbols(1<<j);
+		vfd_update();
+		HAL_Delay(50);
+		do_microrl();
+	}
+
 	vfd_clear_buf();
+	HAL_Delay(500);
 }
 
 

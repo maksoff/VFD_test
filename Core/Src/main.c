@@ -85,13 +85,17 @@ uint8_t nrf24l01p_spi_rw(uint8_t value)
 	return data;
 }
 
-void vfd_update(void) {
-	uint8_t data = 0b11000000; // command 3, set address to 0
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
+void vfd_spi_cs(vfd_cs_t cs)
+{
+	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, cs);
 }
+
+void vfd_spi_tx(uint8_t *pData, uint16_t Size)
+{
+	HAL_SPI_Transmit(&hspi2, pData, Size, 100);
+}
+
 
 void do_microrl(void)
 {
@@ -101,71 +105,26 @@ void do_microrl(void)
 
 void do_vfd_init(void)
 {
-#define FULL_DEMO (0)
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1); // put CS high
-
-	HAL_Delay(10);
+#define FULL_DEMO (1)
+	vfd_spi_cs(VFD_CS_HIGH);
 	HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
+	HAL_Delay(10);
+
+	vfd_init(); // init display, 11 digits 17 segments
+	vfd_leds(0); // disable leds
 
 	for (int i = 0; i < sizeof(vfd.arr1); i++) {
 		vfd.arr1[i] = 0xFF;
 	}
-	uint8_t data;
 
-	data = 0b01000001; // command 2, write to LED port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_Delay(10);
-
-	data = 0b1111; // disable LEDs
-
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
-
-	//write twice, some strange problem with SPI init
-
-	data = 0b01000001; // command 2, write to LED port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_Delay(10);
-
-	data = 0b1111; // disable LEDs
-
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
-
-	data = 0b01000000; // command 2, write to Display port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
 	vfd_update();
-	HAL_Delay(10);
-	// init display, 11 digits 17 segments
-	data = 0b00000111; // command 1, 11 digits 17 segments
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
-	data = 0b10000000; // command 4
-	data |= 1 << 3; // enable/disable display
-	data |= 0b111; // set brightness
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	vfd_control(true, 0b111);
 
 	if(FULL_DEMO)
 	{
-
+		// change brightness
 		for (uint8_t i = 0; i <= 0b111; i++) {
-			data = 0b10000000; // command 4
-			data |= 1 << 3; // enable/disable display
-			data |= i; // set brightness
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-			HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+			vfd_control(true, i);
 			HAL_Delay(250);
 			do_microrl();
 		}
@@ -183,16 +142,8 @@ void do_vfd_init(void)
 		do_microrl();
 	}
 
-
 	//erase everything... just in case
-	clr_vfd();
-
-	data = 0b10000000; // command 4
-	data |= 1 << 3; // enable/disable display
-	data |= 0b111; // set max brightness
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	vfd_clear_buf();
 
 	// fill everything
 	for (int j = 1; j < 15; j++) {
@@ -207,56 +158,35 @@ void do_vfd_init(void)
 		do_microrl();
 	}
 
-	const uint8_t arr[][2] = {
-			{ 6, 0 },
-			{ 0, 0 },
-			{ 0, 1 },
-			{ 0, 4 },
-			{ 0, 3 },
-			{ 0, 5 },
-			{ 0, 2 },
-			{ 0, 6 },
-			{ 1, 16 },
-			{ 1, 15 },
-			{ 2, 16 },
-			{ 2, 15 },
-			{ 3, 16 },
-			{ 3, 15 },
-			{ 4, 16 },
-			{ 4, 15 },
-			{ 5, 16 },
-			{ 5, 15 },
-			{ 6, 16 },
-			{ 6, 15 },
-			{ 8, 16 },
-			{ 8, 15 },
-			{ 9, 16 },
-			{ 10, 16 },
-			{ 10, 15 },
+	const uint32_t arr[] = {
+			VFD_SYM_COLON,
+			VFD_SYM_DIGITAL,
+			VFD_SYM_ANALOG,
+			VFD_SYM_BRACKET_RIGHT,
+			VFD_SYM_SMALL_ARROW_LEFT,
+			VFD_SYM_BRACKET_LEFT,
+			VFD_SYM_SMALL_ARROW_RIGHT,
+			VFD_SYM_DCC,
 	};
 
-	for (int j = 0; j < sizeof(arr) / 2; j++) {
-		for (int b = 0; b < 3; b++)
-			vfd.arr2[arr[j][0]][b] |= ((1 << arr[j][1]) >> (b << 3)) & 0xFF;
+	for (int j = 0; j < sizeof(arr)/sizeof(arr[0]); j++) {
+		vfd_set_symbols(arr[j]);
 		vfd_update();
 		HAL_Delay(50);
 		do_microrl();
 	}
 
-	HAL_Delay(300);
+	for (int j = 0; j < 17; j++) {
+		vfd_set_symbols(1<<j);
+		vfd_update();
+		HAL_Delay(50);
+		do_microrl();
+	}
+
+	vfd_clear_buf();
+	HAL_Delay(500);
 }
 
-void vfd_leds(uint8_t leds)
-{
-	uint8_t data = 0b01000001; // command 2, write to LED port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-
-	data = (~leds)&0b1111;
-
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-}
 
 void do_test_buttons(void)
 {
@@ -269,13 +199,13 @@ void do_test_buttons(void)
 		if (PB1)
 		{
 			vfd_leds(0b0100);
-			str2vfd("PB1 OKAY");
+			vfd_put_string("PB1 OKAY");
 			vfd_update();
 		}
 		else
 		{
 			vfd_leds(0b0010);
-			str2vfd("PB2 OKAY");
+			vfd_put_string("PB2 OKAY");
 			vfd_update();
 		}
 	}
@@ -316,7 +246,7 @@ void do_fram_test(void)
 	if (PB1 && PB2)
 	{
 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0); // turn led on
-		str2vfd("FRAM TEST");
+		vfd_put_string("FRAM TEST");
 		vfd_update();
 		for (int i = 0; i < 3; i++)
 		{
@@ -328,7 +258,7 @@ void do_fram_test(void)
 		if (read())
 		{
 			vfd_leds(0b0100);
-			str2vfd("FRAM FOUND");
+			vfd_put_string("FRAM FOUND");
 			vfd_update();
 		}
 		else
@@ -339,13 +269,13 @@ void do_fram_test(void)
 			if (read())
 			{
 				vfd_leds(0b0011);
-				str2vfd("FRAM OKAY");
+				vfd_put_string("FRAM OKAY");
 				vfd_update();
 			}
 			else
 			{
 				vfd_leds(0b1000);
-				str2vfd("NO FRAM!");
+				vfd_put_string("NO FRAM!");
 				vfd_update();
 			}
 		}
@@ -471,18 +401,17 @@ int main(void)
 
   do_vfd_init();
   test = nrf24l01p_nop();
-  clr_vfd();
   if (test == 0b1110)
   {
-	  str2vfd("NRF24L01+");
-	  symbols_vfd(1<<17);
+	  vfd_put_string("NRF24L01+");
+	  vfd_set_symbols(VFD_SYM_DIGITAL);
 	  if (!rx)
-		  symbols_vfd(1<<18);
+		  vfd_set_symbols(VFD_SYM_ANALOG);
   }
   else
   {
 	  rx = true;
-	  str2vfd("NO NRF");
+	  vfd_put_string("NO NRF");
   }
   vfd_update();
 
@@ -527,13 +456,15 @@ int main(void)
 				 if (payload[0] == 1)
 				 {
 					 vfd_leds(0b0100);
-					 str2vfd("RX PB1");
+					 vfd_put_string("RX PB1");
+					 vfd_set_symbols(VFD_SYM_ARROW_LEFT);
 					 vfd_update();
 				 }
 				 else
 				 {
 					 vfd_leds(0b0010);
-					 str2vfd("RX PB2");
+					 vfd_put_string("RX PB2");
+					 vfd_set_symbols(VFD_SYM_ARROW_RIGHT);
 					 vfd_update();
 				 }
 
@@ -559,12 +490,12 @@ int main(void)
 				if (PB1)
 				{
 					vfd_leds(0b0100);
-					str2vfd("PB1 TX");
+					vfd_put_string("PB1 TX");
 				}
 				else
 				{
 					vfd_leds(0b0010);
-					str2vfd("PB2 TX");
+					vfd_put_string("PB2 TX");
 				}
 				vfd_update();
 
@@ -580,7 +511,7 @@ int main(void)
 						// not send
 						vfd_leds(0b1000);
 						nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
-						str2vfd("TX ERROR");
+						vfd_put_string("TX ERROR");
 						vfd_update();
 						while(PB1||PB2);
 						break;
@@ -597,7 +528,12 @@ int main(void)
 			  last_active_time = HAL_GetTick();
 
 		  if (HAL_GetTick() - last_active_time > 100)
+		  {
 			  vfd_leds(0);
+			  vfd_clr_symbols(VFD_SYM_ARROW_LEFT);
+			  vfd_clr_symbols(VFD_SYM_ARROW_RIGHT);
+			  vfd_update();
+		  }
 
 		  if (HAL_GetTick() - last_active_time > 10000)
 			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
@@ -609,7 +545,7 @@ int main(void)
 				  char buf [11];
 				  memset(buf, '\0', sizeof(buf));
 				  memset(buf, '_', 10-((HAL_GetTick() - last_active_time)/1000));
-				  str2vfd(buf);
+				  vfd_put_string(buf);
 				  vfd_update();
 			  }
 		  }

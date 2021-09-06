@@ -105,52 +105,32 @@ void do_microrl(void)
 
 void do_vfd_init(void)
 {
-#define FULL_DEMO (0)
+#define FULL_DEMO (1)
 	vfd_spi_cs(VFD_CS_HIGH);
 
 	HAL_Delay(10);
 	HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
 
-	for (int i = 0; i < sizeof(vfd.arr1); i++) {
-		vfd.arr1[i] = 0xFF;
-	}
 	uint8_t data;
 
-
+	vfd_init(); // init display, 11 digits 17 segments
 
 	vfd_leds(0); // disable leds
 	HAL_Delay(10);
 
-	data = 0b01000000; // command 2, write to Display port
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
+	for (int i = 0; i < sizeof(vfd.arr1); i++) {
+		vfd.arr1[i] = 0xFF;
+	}
 	vfd_update();
+
 	HAL_Delay(10);
-	// init display, 11 digits 17 segments
-	data = 0b00000111; // command 1, 11 digits 17 segments
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	HAL_Delay(10);
-	data = 0b10000000; // command 4
-	data |= 1 << 3; // enable/disable display
-	data |= 0b111; // set brightness
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	vfd_control(true, 0b111);
 
 	if(FULL_DEMO)
 	{
 
 		for (uint8_t i = 0; i <= 0b111; i++) {
-			data = 0b10000000; // command 4
-			data |= 1 << 3; // enable/disable display
-			data |= i; // set brightness
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-			HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+			vfd_control(true, i);
 			HAL_Delay(250);
 			do_microrl();
 		}
@@ -171,13 +151,6 @@ void do_vfd_init(void)
 
 	//erase everything... just in case
 	vfd_clear_buf();
-
-	data = 0b10000000; // command 4
-	data |= 1 << 3; // enable/disable display
-	data |= 0b111; // set max brightness
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
 
 	// fill everything
 	for (int j = 1; j < 15; j++) {

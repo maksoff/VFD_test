@@ -336,3 +336,30 @@ void vfd_leds(uint8_t leds)
 	vfd_spi_tx(&data, 1);
 	vfd_spi_cs(VFD_CS_HIGH);
 }
+
+/**
+ * sets correct grid & segments count
+ */
+void vfd_init(void)
+{
+	uint8_t data;
+
+	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_DISPLAY_MODE_SETTING|VFD_DMS_11dig_17seg; // command 2, write display
+	vfd_spi_tx(&data, 1);
+	vfd_spi_cs(VFD_CS_HIGH);
+
+}
+
+/**
+ * enable/disable display and set dimming (0..7)
+ */
+void vfd_control(bool enable, uint8_t dimm)
+{
+	uint8_t data;
+
+	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_DISPLAY_CONTROL|(enable?VFD_DC_DISP_ON:0)|(dimm&0b111); // command 4
+	vfd_spi_tx(&data, 1);
+	vfd_spi_cs(VFD_CS_HIGH);
+}

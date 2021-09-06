@@ -116,6 +116,8 @@ void do_vfd_init(void)
 	}
 	uint8_t data;
 
+
+
 	vfd_leds(0); // disable leds
 	HAL_Delay(10);
 

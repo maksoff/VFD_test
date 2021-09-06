@@ -310,8 +310,15 @@ void vfd_restore_backup(void)
  * update data on VFD display
  */
 void vfd_update(void) {
-	uint8_t data = VFD_COM_ADDRESS_SETTING; // command 3, set address to 0
+	uint8_t data;
+
 	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_DATA_SETTING|VFD_DS_WRITE_DISP; // command 2, write display
+	vfd_spi_tx(&data, 1);
+	vfd_spi_cs(VFD_CS_HIGH);
+
+	vfd_spi_cs(VFD_CS_LOW);
+	data = VFD_COM_ADDRESS_SETTING; // command 3, set address to 0
 	vfd_spi_tx(&data, 1);
 	vfd_spi_tx(vfd.arr1, sizeof(vfd.arr1)); // transmit data
 	vfd_spi_cs(VFD_CS_HIGH);

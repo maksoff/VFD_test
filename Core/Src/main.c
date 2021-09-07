@@ -105,7 +105,7 @@ void do_microrl(void)
 
 void do_vfd_init(void)
 {
-#define FULL_DEMO (1)
+#define FULL_DEMO (0)
 	vfd_spi_cs(VFD_CS_HIGH);
 	HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
 	HAL_Delay(10);
@@ -411,7 +411,7 @@ int main(void)
   else
   {
 	  rx = true;
-	  vfd_put_string("NO NRF");
+	  vfd_put_string("-NO NRF-");
   }
   vfd_update();
 
@@ -499,6 +499,8 @@ int main(void)
 				}
 				vfd_update();
 
+				uint32_t timeout_cnt = HAL_GetTick();
+
 				do {
 					if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_TX_DS))
 					{
@@ -512,6 +514,15 @@ int main(void)
 						vfd_leds(0b1000);
 						nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
 						vfd_put_string("TX ERROR");
+						vfd_update();
+						while(PB1||PB2);
+						break;
+					}
+					if (HAL_GetTick() - timeout_cnt > 1000)
+					{
+						// timeout error
+						vfd_leds(0b1111);
+						vfd_put_string("TIMEOUT");
 						vfd_update();
 						while(PB1||PB2);
 						break;

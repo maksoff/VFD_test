@@ -63,9 +63,67 @@ static void MX_I2C1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
+enum
+{
+    NRF_CHANNEL = 123,
+    NRF_POWER_UP_DELAY = 2,
+    NRF_PAYLOAD_LENGTH = 10,
+    NRF_RETRANSMITS = 5,
+
+    #if RF_PAYLOAD_LENGTH <= 18
+        NRF_RETRANSMIT_DELAY = 250
+    #else
+        NRF_RETRANSMIT_DELAY = 500
+    #endif
+};
+
+uint8_t address[5] = { 0x31, 0x41, 0x59, 0x26, 0x56 };
+
+
 #define PB1 (HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin))
 #define PB2 (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
 
+void delay(uint32_t delay)
+{
+	HAL_Delay(delay);
+}
+
+void nrf_init_tx(uint8_t *address)
+{
+    nrf24l01p_get_clear_irq_flags();
+    nrf24l01p_close_pipe(NRF24L01P_ALL);
+    nrf24l01p_open_pipe(NRF24L01P_TX, true);
+
+    nrf24l01p_set_auto_retr(NRF_RETRANSMITS, NRF_RETRANSMIT_DELAY);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
+    nrf24l01p_set_address(NRF24L01P_PIPE0, address);
+
+    nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
+    nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
+    nrf24l01p_set_address(NRF24L01P_TX, address);
+    nrf24l01p_set_operation_mode(NRF24L01P_PTX);
+    nrf24l01p_set_rf_channel(NRF_CHANNEL);
+
+    nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
+    delay(NRF_POWER_UP_DELAY);
+}
+
+void nrf_init_rx(uint8_t *address)
+{
+    nrf24l01p_get_clear_irq_flags();
+    nrf24l01p_close_pipe(NRF24L01P_ALL);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
+    nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
+    nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
+    nrf24l01p_set_address(NRF24L01P_PIPE0, address);
+    nrf24l01p_set_operation_mode(NRF24L01P_PRX);
+    nrf24l01p_set_rx_payload_width(NRF24L01P_PIPE0, NRF_PAYLOAD_LENGTH);
+    nrf24l01p_set_rf_channel(NRF_CHANNEL);
+
+    nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
+    delay(NRF_POWER_UP_DELAY);
+}
 
 void nrf24l01p_spi_ss(nrf24l01p_spi_ss_level_t level)
 {
@@ -187,30 +245,6 @@ void do_vfd_init(void)
 	HAL_Delay(500);
 }
 
-
-void do_test_buttons(void)
-{
-	static uint32_t last_time = 0;
-	if (HAL_GetTick() - last_time < 100)
-		return;
-	last_time = HAL_GetTick();
-	if (PB1 || PB2)
-	{
-		if (PB1)
-		{
-			vfd_leds(0b0100);
-			vfd_put_string("PB1 OKAY");
-			vfd_update();
-		}
-		else
-		{
-			vfd_leds(0b0010);
-			vfd_put_string("PB2 OKAY");
-			vfd_update();
-		}
-	}
-}
-
 void do_led(void)
 {
 	static uint32_t last_time = 0;
@@ -298,62 +332,135 @@ void do_fram_test(void)
 	last_time = HAL_GetTick();
 }
 
-
-enum
+bool do_buttons_and_nrf(void)
 {
-    NRF_CHANNEL = 123,
-    NRF_POWER_UP_DELAY = 2,
-    NRF_PAYLOAD_LENGTH = 10,
-    NRF_RETRANSMITS = 5,
+	static bool set_rx = true;
+	static uint32_t last_time = 0;
+	if (HAL_GetTick() - last_time < (set_rx?90:70))
+		return false;
+	last_time = HAL_GetTick();
 
-    #if RF_PAYLOAD_LENGTH <= 18
-        NRF_RETRANSMIT_DELAY = 250
-    #else
-        NRF_RETRANSMIT_DELAY = 500
-    #endif
-};
+	if (PB1 ^ PB2)
+	{
+		// we need to transmit
+		set_rx = true;
+		HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
+		HAL_Delay(10);
+		nrf_init_tx(address);
 
-uint8_t address[5] = { 0x31, 0x41, 0x59, 0x26, 0x56 };
+		static uint8_t payload[NRF_PAYLOAD_LENGTH];
+		memset(payload, 0x44, sizeof(payload));
+		if (PB1)
+			payload[0] = 1;
+		else if (PB2)
+			payload[0] = 2;
+		else
+			return false;
+		nrf24l01p_write_tx_payload(payload, sizeof(payload));
 
-void delay(uint32_t delay)
-{
-	HAL_Delay(delay);
-}
+		HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 1);
+		HAL_Delay(1);
+		HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
 
-void nrf_init_tx(uint8_t *address)
-{
-    nrf24l01p_get_clear_irq_flags();
-    nrf24l01p_close_pipe(NRF24L01P_ALL);
-    nrf24l01p_open_pipe(NRF24L01P_TX, true);
+		if (payload[0] == 1)
+		{
+			vfd_leds(0b0001);
+			vfd_put_string("PB1");
+		}
+		else
+		{
+			vfd_leds(0b0010);
+			vfd_put_string("PB2");
+		}
+		vfd_update();
 
-    nrf24l01p_set_auto_retr(NRF_RETRANSMITS, NRF_RETRANSMIT_DELAY);
-    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
-    nrf24l01p_set_address(NRF24L01P_PIPE0, address);
+		uint32_t timeout_cnt = HAL_GetTick();
 
-    nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
-    nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
-    nrf24l01p_set_address(NRF24L01P_TX, address);
-    nrf24l01p_set_operation_mode(NRF24L01P_PTX);
-    nrf24l01p_set_rf_channel(NRF_CHANNEL);
+		do {
+			if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_TX_DS))
+			{
+				//successfully transmitted
+				if (payload[0] == 1)
+					vfd_put_string("PB1 TX");
+				else
+					vfd_put_string("PB2 TX");
+				vfd_update();
+				nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_TX_DS);
+				break;
+			}
+			if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_MAX_RT))
+			{
+				// not send
+				vfd_leds(0b1000);
+				if (payload[0] == 1)
+					vfd_put_string("PB1 MAX RT");
+				else
+					vfd_put_string("PB2 MAX RT");
+				vfd_update();
+				nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
+				nrf24l01p_flush_tx();
+				while(PB1||PB2);
+				break;
+			}
+			if (HAL_GetTick() - timeout_cnt > 200)
+			{
+				// timeout error
+				vfd_leds(0b1011);
+				if (payload[0] == 1)
+					vfd_put_string("PB1 T/OUT");
+				else
+					vfd_put_string("PB2 T/OUT");
+				vfd_update();
+				nrf24l01p_flush_tx();
+				while(PB1||PB2);
+				break;
+			}
 
-    nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
-    delay(NRF_POWER_UP_DELAY);
-}
+		} while (1);
+		return true; // we where active
+	}
+	else
+	{
+		// we need to receive
+		if (set_rx)
+		{
+			set_rx = false;
+			nrf_init_rx(address);
+			HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 1);
+		}
 
-void nrf_init_rx(uint8_t *address)
-{
-    nrf24l01p_get_clear_irq_flags();
-    nrf24l01p_close_pipe(NRF24L01P_ALL);
-    nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
-    nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
-    nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
-    nrf24l01p_set_address(NRF24L01P_PIPE0, address);
-    nrf24l01p_set_operation_mode(NRF24L01P_PRX);
-    nrf24l01p_set_rx_payload_width(NRF24L01P_PIPE0, NRF_PAYLOAD_LENGTH);
-    nrf24l01p_set_rf_channel(NRF_CHANNEL);
+		if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_RX_DR))
+		{
+			nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_RX_DR);
 
-    nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
-    delay(NRF_POWER_UP_DELAY);
+			uint8_t payload[NRF_PAYLOAD_LENGTH];
+
+			while (!nrf24l01p_rx_fifo_empty())
+				nrf24l01p_read_rx_payload(payload);
+
+			if (payload[0] == 1)
+			{
+				vfd_leds(0b0101);
+				vfd_put_string("* RX PB1 *");
+				vfd_set_symbols(VFD_SYM_ARROW_LEFT);
+				vfd_update();
+			}
+			else if (payload[0] == 2)
+			{
+				vfd_leds(0b0110);
+				vfd_put_string("* RX PB2 *");
+				vfd_set_symbols(VFD_SYM_ARROW_RIGHT);
+				vfd_update();
+			}
+			return true; // we have something received
+		}
+		else
+		{
+			// no buttons pressed and nothing received
+			return false;
+		}
+	}
+	return false;
 }
 
 /* USER CODE END 0 */
@@ -394,35 +501,20 @@ int main(void)
   uint8_t test;
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
 
-	// hold PB1 to enable tx
-	bool rx = !PB1;
-	if (!rx)
-		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
   do_vfd_init();
   test = nrf24l01p_nop();
-  if (test == 0b1110)
+  if ((test&0b1110) == 0b1110)
   {
 	  vfd_put_string("NRF24L01+");
 	  vfd_set_symbols(VFD_SYM_DIGITAL);
-	  if (!rx)
-		  vfd_set_symbols(VFD_SYM_ANALOG);
   }
   else
   {
-	  rx = true;
 	  vfd_put_string("-NO NRF-");
   }
   vfd_update();
-
-  if (rx)
-  {
-	  nrf_init_rx(address);
-	  // enable read
-	  HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 1);
-  }
-  else
-	  nrf_init_tx(address);
 
   /* USER CODE END 2 */
 
@@ -432,137 +524,37 @@ int main(void)
   uint32_t last_active_time = HAL_GetTick();
   while (1)
   {
-	  if (rx)
-		  do_test_buttons();
 	  do_led();
 	  do_fram_test();
+	  if (do_buttons_and_nrf())
+		  last_active_time = HAL_GetTick();
 
+	  // disable if inactive
 
-	  static uint32_t last_time = 0;
-	  if (HAL_GetTick() - last_time > (rx?110:100))
+	  if (HAL_GetTick() - last_active_time > 200)
 	  {
-		  if (rx)
+		  vfd_leds(0);
+		  vfd_clr_symbols(VFD_SYM_ARROW_LEFT);
+		  vfd_clr_symbols(VFD_SYM_ARROW_RIGHT);
+		  vfd_update();
+	  }
+
+	  if (HAL_GetTick() - last_active_time > 10000)
+		  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
+	  else
+	  {
+		  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
+		  if (HAL_GetTick() - last_active_time > 3000)
 		  {
-			  if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_RX_DR))
-			  {
-				  last_active_time = HAL_GetTick();
-				  nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_RX_DR);
-
-				  uint8_t payload[NRF_PAYLOAD_LENGTH];
-
-				  while (!nrf24l01p_rx_fifo_empty())
-					  nrf24l01p_read_rx_payload(payload);
-
-				 if (payload[0] == 1)
-				 {
-					 vfd_leds(0b0100);
-					 vfd_put_string("RX PB1");
-					 vfd_set_symbols(VFD_SYM_ARROW_LEFT);
-					 vfd_update();
-				 }
-				 else
-				 {
-					 vfd_leds(0b0010);
-					 vfd_put_string("RX PB2");
-					 vfd_set_symbols(VFD_SYM_ARROW_RIGHT);
-					 vfd_update();
-				 }
-
-			  }
-			  else
-			  {
-				  //vfd_leds(0b0000);
-			  }
-		  }
-		  else
-		  {
-			if (PB1 || PB2)
-			{
-				static uint8_t payload[NRF_PAYLOAD_LENGTH];
-				memset(payload, 0x44, sizeof(payload));
-				payload[0] = PB1;
-				nrf24l01p_write_tx_payload(payload, sizeof(payload));
-
-				HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 1);
-				HAL_Delay(1);
-				HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
-
-				if (PB1)
-				{
-					vfd_leds(0b0100);
-					vfd_put_string("PB1 TX");
-				}
-				else
-				{
-					vfd_leds(0b0010);
-					vfd_put_string("PB2 TX");
-				}
-				vfd_update();
-
-				uint32_t timeout_cnt = HAL_GetTick();
-
-				do {
-					if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_TX_DS))
-					{
-						//successfully transmitted
-						nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_TX_DS);
-						break;
-					}
-					if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_MAX_RT))
-					{
-						// not send
-						vfd_leds(0b1000);
-						nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
-						vfd_put_string("TX ERROR");
-						vfd_update();
-						while(PB1||PB2);
-						break;
-					}
-					if (HAL_GetTick() - timeout_cnt > 1000)
-					{
-						// timeout error
-						vfd_leds(0b1111);
-						vfd_put_string("TIMEOUT");
-						vfd_update();
-						while(PB1||PB2);
-						break;
-					}
-
-				} while (1);
-				  last_active_time = HAL_GetTick();
-			}
-
-		  }
-
-
-		  if (PB1 || PB2)
-			  last_active_time = HAL_GetTick();
-
-		  if (HAL_GetTick() - last_active_time > 100)
-		  {
-			  vfd_leds(0);
-			  vfd_clr_symbols(VFD_SYM_ARROW_LEFT);
-			  vfd_clr_symbols(VFD_SYM_ARROW_RIGHT);
+			  char buf [11];
+			  memset(buf, '\0', sizeof(buf));
+			  memset(buf, '_', 10-((HAL_GetTick() - last_active_time)/1000));
+			  vfd_put_string(buf);
 			  vfd_update();
 		  }
-
-		  if (HAL_GetTick() - last_active_time > 10000)
-			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 0);
-		  else
-		  {
-			  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
-			  if (HAL_GetTick() - last_active_time > 3000)
-			  {
-				  char buf [11];
-				  memset(buf, '\0', sizeof(buf));
-				  memset(buf, '_', 10-((HAL_GetTick() - last_active_time)/1000));
-				  vfd_put_string(buf);
-				  vfd_update();
-			  }
-		  }
-
-		  last_time = HAL_GetTick();
 	  }
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

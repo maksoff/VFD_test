@@ -26,6 +26,7 @@
 #include "vfd.h"
 #include "nrf24l01p.h"
 #include "string.h"
+#include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
 
@@ -500,12 +501,15 @@ int main(void)
   /* USER CODE BEGIN 2 */
   __HAL_SPI_ENABLE(&hspi2);
 
+  HAL_GPIO_WritePin(USB_PU_GPIO_Port, USB_PU_Pin, 1);
+
   uint8_t test;
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
 
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
   do_vfd_init();
+
   test = nrf24l01p_nop();
   if ((test&0b1110) == 0b1110)
   {

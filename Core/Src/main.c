@@ -522,8 +522,6 @@ void sigint(void)
 	vfd_put_string("CTRL + C");
 	vfd_set_symbols(VFD_SYM_DCC);
 	vfd_update();
-	HAL_Delay(1000);
-	vfd_clr_symbols(VFD_SYM_DCC);
 	vfd_update();
 
 	// emulate ENTER input to print the promptexecute
@@ -574,7 +572,7 @@ bool do_nrf_scan(int8_t command)
 		delay_us(5000);
 		HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin,0);
 		if (nrf24l01p_get_carrier_detect())
-			if (arr[i] < 250)
+			if (arr[i] < 0xff)
 				arr[i]++;
 	}
 	uint8_t packet[NRF24L01P_CHANNELS_COUNT + 1] = {0};
@@ -584,7 +582,6 @@ bool do_nrf_scan(int8_t command)
 	}
 	print((char *)packet);
 	print(ENDL);
-	HAL_Delay(100);
 	return true;
 }
 
@@ -677,6 +674,7 @@ int main(void)
 		  vfd_leds(0);
 		  vfd_clr_symbols(VFD_SYM_ARROW_LEFT);
 		  vfd_clr_symbols(VFD_SYM_ARROW_RIGHT);
+		  vfd_clr_symbols(VFD_SYM_DCC);
 		  vfd_update();
 	  }
 

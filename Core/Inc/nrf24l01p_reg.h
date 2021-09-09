@@ -215,6 +215,7 @@ enum
 
 /** @name RF_SETUP register bit definitions */
 //@{
+	NRF24L01P_RF_SETUP_CONT_WAVE = 7,	  /**< RF_SETUP register bit 7 */
     NRF24L01P_RF_SETUP_PLL_LOCK  = 4,     /**< RF_SETUP register bit 4 */
     NRF24L01P_RF_SETUP_RF_DR     = 3,     /**< RF_SETUP register bit 3 */
     NRF24L01P_RF_SETUP_RF_PWR1   = 2,     /**< RF_SETUP register bit 2 */
@@ -240,6 +241,11 @@ enum
     NRF24L01P_FIFO_STATUS_RX_FULL      = 1,     /**< FIFO_STATUS register bit 1 */
     NRF24L01P_FIFO_STATUS_RX_EMPTY     = 0      /**< FIFO_STATUS register bit 0 */
 //@}
+};
+
+enum
+{
+	NRF24L01P_CHANNELS_COUNT = 126
 };
 
 #endif // NRF24L01P_REG_H__

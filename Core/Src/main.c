@@ -19,12 +19,16 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "vfd.h"
 #include "nrf24l01p.h"
 #include "string.h"
+#include "usbd_cdc_if.h"
+#include "microrl_cmd.h"
+#include "fifo.h"
 
 /* USER CODE END Includes */
 
@@ -47,6 +51,8 @@ I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim1;
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -56,17 +62,26 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
+
+void do_microrl(void);
+bool do_nrf_scan(int8_t command);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint32_t last_active_time;
 
+void active(void)
+{
+	last_active_time = HAL_GetTick();
+}
 
 enum
 {
-    NRF_CHANNEL = 123,
+    NRF_CHANNEL = 0x44,//123,
     NRF_POWER_UP_DELAY = 2,
     NRF_PAYLOAD_LENGTH = 10,
     NRF_RETRANSMITS = 5,
@@ -83,6 +98,13 @@ uint8_t address[5] = { 0x31, 0x41, 0x59, 0x26, 0x56 };
 
 #define PB1 (HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin))
 #define PB2 (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
+
+// delays for us count
+void delay_us(uint16_t us)
+{
+	__HAL_TIM_SET_COUNTER(&htim1,0);
+	while ((uint16_t)__HAL_TIM_GET_COUNTER(&htim1) < us);
+}
 
 void delay(uint32_t delay)
 {
@@ -153,13 +175,6 @@ void vfd_spi_tx(uint8_t *pData, uint16_t Size)
 {
 	HAL_SPI_Transmit(&hspi2, pData, Size, 100);
 }
-
-
-void do_microrl(void)
-{
-	return;
-}
-
 
 void do_vfd_init(void)
 {
@@ -332,6 +347,8 @@ void do_fram_test(void)
 	last_time = HAL_GetTick();
 }
 
+#define BIT(index) ((uint8_t)1 << (uint8_t)(index))
+#define BIT_COND(data,index,condition) (((uint8_t)(data) & ~BIT(index)) | ((condition) ? BIT(index) : (uint8_t)0))
 bool do_buttons_and_nrf(void)
 {
 	static bool set_rx = true;
@@ -399,7 +416,31 @@ bool do_buttons_and_nrf(void)
 				vfd_update();
 				nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
 				nrf24l01p_flush_tx();
-				while(PB1||PB2);
+				uint32_t but_hold = HAL_GetTick();
+				while(PB1||PB2)
+				{
+					if (HAL_GetTick() - but_hold > 2000)
+					{
+						vfd_put_string("BERSERK");
+						vfd_update();
+						nrf24l01p_set_operation_mode(NRF24L01P_PTX);
+
+						nrf24l01p_set_rf_channel(NRF_CHANNEL);
+						nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
+						nrf24l01p_set_pll_mode(NRF24L01P_PLL_LOCK);
+						nrf24l01p_write_reg(NRF24L01P_RF_SETUP,
+								BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP),
+										NRF24L01P_RF_SETUP_CONT_WAVE, 1));
+						delay(NRF_POWER_UP_DELAY);
+						HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 1);
+						while(PB1||PB2);
+						nrf24l01p_write_reg(NRF24L01P_RF_SETUP,
+								BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP),
+										NRF24L01P_RF_SETUP_CONT_WAVE, 0));
+						nrf24l01p_set_pll_mode(NRF24L01P_PLL_UNLOCK);
+						HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
+					}
+				}
 				break;
 			}
 			if (HAL_GetTick() - timeout_cnt > 200)
@@ -463,6 +504,95 @@ bool do_buttons_and_nrf(void)
 	return false;
 }
 
+void do_microrl(void)
+{
+	while (!fifo_is_empty())
+	{
+		uint8_t buf = fifo_pop();
+		microrl_print_char(buf);
+	}
+}
+
+void sigint(void)
+{
+	print (ENDL);
+	print ("^C catched!");
+	do_nrf_scan(-1);
+	active();
+	vfd_put_string("CTRL + C");
+	vfd_set_symbols(VFD_SYM_DCC);
+	vfd_update();
+	vfd_update();
+
+	// emulate ENTER input to print the promptexecute
+	char * p = ENDL;
+	while(*p) fifo_push(*(p++));
+}
+
+
+bool do_nrf_scan(int8_t command)
+{
+	static bool active = false;
+	static uint8_t arr[NRF24L01P_CHANNELS_COUNT] = {0};
+
+	if (command == -1)
+	{
+		active = false;
+	}
+	if (command == 1)
+	{
+		memset(arr, 0, NRF24L01P_CHANNELS_COUNT);
+		print("0000000000000000111111111111111122222222222222223333333333333333");
+		print("44444444444444445555555555555555666666666666666677777777777777");
+		print(ENDL);
+		print("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+		print("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd");
+		print(ENDL);
+		active = true;
+		return false;
+	}
+	if (!active)
+		return false;
+
+	HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin,0);
+	nrf24l01p_get_clear_irq_flags();
+    nrf24l01p_close_pipe(NRF24L01P_ALL);
+    nrf24l01p_open_pipe(NRF24L01P_PIPE0, false);
+    uint8_t add[] = {0x05, 0xA5, 0x55, 0xA5, 0x50};
+    nrf24l01p_set_address(NRF24L01P_PIPE0, add);
+    nrf24l01p_set_operation_mode(NRF24L01P_PRX);
+    nrf24l01p_set_rx_payload_width(NRF24L01P_PIPE0, NRF_PAYLOAD_LENGTH);
+    nrf24l01p_set_power_mode(NRF24L01P_PWR_UP);
+    delay(NRF_POWER_UP_DELAY);
+
+	for (int i = 0; i < NRF24L01P_CHANNELS_COUNT; i++)
+	{
+	    nrf24l01p_set_rf_channel(i);
+		HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin,1);
+		delay_us(5000);
+		HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin,0);
+		if (nrf24l01p_get_carrier_detect())
+			if (arr[i] < 0xff)
+				arr[i]++;
+	}
+	uint8_t packet[NRF24L01P_CHANNELS_COUNT + 1] = {0};
+	for (int i = 0; i < NRF24L01P_CHANNELS_COUNT; i++)
+	{
+		packet[i] = (arr[i] < 0xf?arr[i]:0xf) + ((arr[i] < 10)?'0':('a' - 0xa));
+	}
+	print((char *)packet);
+	print(ENDL);
+	return true;
+}
+
+int nrf_scan (int argc, const char * const * argv)
+{
+	vfd_put_string("NRF SCAN");
+	do_nrf_scan(1);
+	vfd_update();
+	active();
+	return 0;
+}
 /* USER CODE END 0 */
 
 /**
@@ -495,8 +625,14 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI2_Init();
   MX_I2C1_Init();
+  MX_USB_DEVICE_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   __HAL_SPI_ENABLE(&hspi2);
+  HAL_TIM_Base_Start(&htim1);
+
+  HAL_GPIO_WritePin(USB_PU_GPIO_Port, USB_PU_Pin, 1);
+  init_microrl(); // we are ready for microrl!
 
   uint8_t test;
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
@@ -504,15 +640,16 @@ int main(void)
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
   do_vfd_init();
+
   test = nrf24l01p_nop();
   if ((test&0b1110) == 0b1110)
   {
 	  vfd_put_string("NRF24L01+");
-	  vfd_set_symbols(VFD_SYM_DIGITAL);
+	  vfd_set_symbols(VFD_SYM_DOLBY);
   }
   else
   {
-	  vfd_put_string("-NO NRF-");
+	  vfd_put_string("VFD FV651G");
   }
   vfd_update();
 
@@ -521,12 +658,13 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  uint32_t last_active_time = HAL_GetTick();
+  last_active_time = HAL_GetTick();
   while (1)
   {
 	  do_led();
 	  do_fram_test();
-	  if (do_buttons_and_nrf())
+	  do_microrl();
+	  if (do_nrf_scan(0) || do_buttons_and_nrf())
 		  last_active_time = HAL_GetTick();
 
 	  // disable if inactive
@@ -536,6 +674,7 @@ int main(void)
 		  vfd_leds(0);
 		  vfd_clr_symbols(VFD_SYM_ARROW_LEFT);
 		  vfd_clr_symbols(VFD_SYM_ARROW_RIGHT);
+		  vfd_clr_symbols(VFD_SYM_DCC);
 		  vfd_update();
 	  }
 
@@ -570,6 +709,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -595,6 +735,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
@@ -669,6 +815,52 @@ static void MX_SPI2_Init(void)
   /* USER CODE BEGIN SPI2_Init 2 */
 
   /* USER CODE END SPI2_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = HAL_RCC_GetSysClockFreq()/1000000-1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
 
 }
 

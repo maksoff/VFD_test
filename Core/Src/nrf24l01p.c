@@ -411,7 +411,7 @@ uint8_t nrf24l01p_nop(void)
 
 void nrf24l01p_set_pll_mode(nrf24l01p_pll_mode_t pll_mode)
 {
-  nrf24l01p_write_reg(NRF24L01P_RF_SETUP, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_PLL_LOCK, pll_mode == NRF24L01P_PLL_LOCK));
+  nrf24l01p_write_reg(NRF24L01P_RF_SETUP, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_PLL_LOCK, pll_mode == NRF24L01P_PLL_LOCK));
 }
 
 nrf24l01p_pll_mode_t nrf24l01p_get_pll_mode(void)

@@ -27,6 +27,8 @@
 #include "nrf24l01p.h"
 #include "string.h"
 #include "usbd_cdc_if.h"
+#include "microrl_cmd.h"
+#include "fifo.h"
 
 /* USER CODE END Includes */
 
@@ -60,11 +62,18 @@ static void MX_SPI2_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
+void do_microrl(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint32_t last_active_time;
 
+void active(void)
+{
+	last_active_time = HAL_GetTick();
+}
 
 enum
 {
@@ -155,13 +164,6 @@ void vfd_spi_tx(uint8_t *pData, uint16_t Size)
 {
 	HAL_SPI_Transmit(&hspi2, pData, Size, 100);
 }
-
-
-void do_microrl(void)
-{
-	return;
-}
-
 
 void do_vfd_init(void)
 {
@@ -465,6 +467,40 @@ bool do_buttons_and_nrf(void)
 	return false;
 }
 
+void do_microrl(void)
+{
+	while (!fifo_is_empty())
+	{
+		uint8_t buf = fifo_pop();
+		microrl_print_char(buf);
+	}
+}
+
+void sigint(void)
+{
+	print (ENDL);
+	print ("^C catched!");
+	active();
+	vfd_put_string("CTRL + C");
+	vfd_set_symbols(VFD_SYM_DCC);
+	vfd_update();
+	HAL_Delay(1000);
+	vfd_clr_symbols(VFD_SYM_DCC);
+	vfd_update();
+
+	// emulate ENTER input to print the promptexecute
+	char * p = ENDL;
+	while(*p) fifo_push(*(p++));
+}
+
+
+int nrf_scan (int argc, const char * const * argv)
+{
+	vfd_put_string("NRF SCAN");
+	vfd_update();
+	active();
+	return 0;
+}
 /* USER CODE END 0 */
 
 /**
@@ -502,6 +538,7 @@ int main(void)
   __HAL_SPI_ENABLE(&hspi2);
 
   HAL_GPIO_WritePin(USB_PU_GPIO_Port, USB_PU_Pin, 1);
+  init_microrl(); // we are ready for microrl!
 
   uint8_t test;
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
@@ -514,11 +551,11 @@ int main(void)
   if ((test&0b1110) == 0b1110)
   {
 	  vfd_put_string("NRF24L01+");
-	  vfd_set_symbols(VFD_SYM_DIGITAL);
+	  vfd_set_symbols(VFD_SYM_DOLBY);
   }
   else
   {
-	  vfd_put_string("-NO NRF-");
+	  vfd_put_string("VFD FV651G");
   }
   vfd_update();
 
@@ -527,11 +564,12 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  uint32_t last_active_time = HAL_GetTick();
+  last_active_time = HAL_GetTick();
   while (1)
   {
 	  do_led();
 	  do_fram_test();
+	  do_microrl();
 	  if (do_buttons_and_nrf())
 		  last_active_time = HAL_GetTick();
 

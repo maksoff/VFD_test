@@ -53,6 +53,8 @@
 #define APP_TX_DATA_SIZE  1000
 /* USER CODE BEGIN EXPORTED_DEFINES */
 
+ extern USBD_HandleTypeDef hUsbDeviceFS;
+
 /* USER CODE END EXPORTED_DEFINES */
 
 /**

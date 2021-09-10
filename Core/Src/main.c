@@ -403,7 +403,7 @@ bool do_buttons_and_nrf(void)
 				if (total >= 10)
 				{
 					char t_buf[11];
-					snprintf(t_buf, 11, "%ld/%ld", good, total);
+					snprintf(t_buf, 11, "-%ld+%ld", total-good, good);
 					vfd_put_string(t_buf);
 				} else if (payload[0] == 1)
 					vfd_put_string("PB1 TX");
@@ -421,7 +421,7 @@ bool do_buttons_and_nrf(void)
 				if (total >= 10)
 				{
 					char t_buf[11];
-					snprintf(t_buf, 11, "%ld/%ld", good, total);
+					snprintf(t_buf, 11, "-%ld+%ld", total-good, good);
 					vfd_put_string(t_buf);
 				} else if (payload[0] == 1)
 					vfd_put_string("PB1 MAX RT");
@@ -468,7 +468,7 @@ bool do_buttons_and_nrf(void)
 				if (total >= 10)
 				{
 					char t_buf[11];
-					snprintf(t_buf, 11, "%ld/%ld", good, total);
+					snprintf(t_buf, 11, "-%ld+%ld", total-good, good);
 					vfd_put_string(t_buf);
 				} else if (payload[0] == 1)
 					vfd_put_string("PB1 T/OUT");
@@ -712,7 +712,7 @@ int main(void)
 
 	  // disable if inactive
 
-	  if (HAL_GetTick() - last_active_time > 300)
+	  if (HAL_GetTick() - last_active_time > 1000)
 	  {
 		  vfd_leds(0);
 		  vfd_clr_symbols(~VFD_SYM_DOLBY);

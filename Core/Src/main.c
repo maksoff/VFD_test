@@ -81,7 +81,7 @@ void active(void)
 
 enum
 {
-    NRF_CHANNEL = 0x44,//123,
+    NRF_CHANNEL = 123,
     NRF_POWER_UP_DELAY = 2,
     NRF_PAYLOAD_LENGTH = 10,
     NRF_RETRANSMITS = 5,
@@ -353,9 +353,11 @@ bool do_buttons_and_nrf(void)
 {
 	static bool set_rx = true;
 	static uint32_t last_time = 0;
-	if (HAL_GetTick() - last_time < (set_rx?90:70))
+	if (HAL_GetTick() - last_time < (set_rx?290:270))
 		return false;
 	last_time = HAL_GetTick();
+
+	static uint32_t good = 0, total = 0;
 
 	if (PB1 ^ PB2)
 	{
@@ -382,22 +384,28 @@ bool do_buttons_and_nrf(void)
 		if (payload[0] == 1)
 		{
 			vfd_leds(0b0001);
-			vfd_put_string("PB1");
 		}
 		else
 		{
 			vfd_leds(0b0010);
-			vfd_put_string("PB2");
 		}
 		vfd_update();
 
 		uint32_t timeout_cnt = HAL_GetTick();
 
+		total++;
+
 		do {
 			if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_TX_DS))
 			{
 				//successfully transmitted
-				if (payload[0] == 1)
+				good++;
+				if (total >= 10)
+				{
+					char t_buf[11];
+					snprintf(t_buf, 11, "%ld/%ld", good, total);
+					vfd_put_string(t_buf);
+				} else if (payload[0] == 1)
 					vfd_put_string("PB1 TX");
 				else
 					vfd_put_string("PB2 TX");
@@ -408,14 +416,22 @@ bool do_buttons_and_nrf(void)
 			if (nrf24l01p_get_irq_flags() & (1 << NRF24L01P_IRQ_MAX_RT))
 			{
 				// not send
+				vfd_set_symbols(VFD_SYM_ARROW_LEFT);
 				vfd_leds(0b1000);
-				if (payload[0] == 1)
+				if (total >= 10)
+				{
+					char t_buf[11];
+					snprintf(t_buf, 11, "%ld/%ld", good, total);
+					vfd_put_string(t_buf);
+				} else if (payload[0] == 1)
 					vfd_put_string("PB1 MAX RT");
 				else
 					vfd_put_string("PB2 MAX RT");
 				vfd_update();
 				nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
 				nrf24l01p_flush_tx();
+
+				/*
 				uint32_t but_hold = HAL_GetTick();
 				while(PB1||PB2)
 				{
@@ -441,19 +457,26 @@ bool do_buttons_and_nrf(void)
 						HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
 					}
 				}
+				*/
 				break;
 			}
 			if (HAL_GetTick() - timeout_cnt > 200)
 			{
 				// timeout error
+				vfd_set_symbols(VFD_SYM_ARROW_RIGHT);
 				vfd_leds(0b1011);
-				if (payload[0] == 1)
+				if (total >= 10)
+				{
+					char t_buf[11];
+					snprintf(t_buf, 11, "%ld/%ld", good, total);
+					vfd_put_string(t_buf);
+				} else if (payload[0] == 1)
 					vfd_put_string("PB1 T/OUT");
 				else
 					vfd_put_string("PB2 T/OUT");
 				vfd_update();
 				nrf24l01p_flush_tx();
-				while(PB1||PB2);
+				//while(PB1||PB2);
 				break;
 			}
 
@@ -463,6 +486,9 @@ bool do_buttons_and_nrf(void)
 	else
 	{
 		// we need to receive
+		good = 0;
+		total = 0;
+
 		if (set_rx)
 		{
 			set_rx = false;
@@ -686,12 +712,10 @@ int main(void)
 
 	  // disable if inactive
 
-	  if (HAL_GetTick() - last_active_time > 200)
+	  if (HAL_GetTick() - last_active_time > 300)
 	  {
 		  vfd_leds(0);
-		  vfd_clr_symbols(VFD_SYM_ARROW_LEFT);
-		  vfd_clr_symbols(VFD_SYM_ARROW_RIGHT);
-		  vfd_clr_symbols(VFD_SYM_DCC);
+		  vfd_clr_symbols(~VFD_SYM_DOLBY);
 		  vfd_update();
 	  }
 

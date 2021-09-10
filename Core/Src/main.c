@@ -538,14 +538,21 @@ bool do_nrf_scan(int8_t command)
 	if (command == -1)
 	{
 		active = false;
+		print(ENDL);
+		print("O000000000000000111111111111111122222222222222223333333333333333");
+		print("44444444444444445555555555555555666666666666666677777777777777");
+		print(ENDL);
+		print("O123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+		print("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd");
+		print(ENDL);
 	}
 	if (command == 1)
 	{
 		memset(arr, 0, NRF24L01P_CHANNELS_COUNT);
-		print("0000000000000000111111111111111122222222222222223333333333333333");
+		print("O000000000000000111111111111111122222222222222223333333333333333");
 		print("44444444444444445555555555555555666666666666666677777777777777");
 		print(ENDL);
-		print("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+		print("O123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
 		print("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd");
 		print(ENDL);
 		active = true;
@@ -578,7 +585,10 @@ bool do_nrf_scan(int8_t command)
 	uint8_t packet[NRF24L01P_CHANNELS_COUNT + 1] = {0};
 	for (int i = 0; i < NRF24L01P_CHANNELS_COUNT; i++)
 	{
-		packet[i] = (arr[i] < 0xf?arr[i]:0xf) + ((arr[i] < 10)?'0':('a' - 0xa));
+		if (arr[i] >=0xa0)
+			packet[i] = ((arr[i]>>4)&0xF) + 'A' - 0xa;
+		else
+			packet[i] = (arr[i] < 0xf?arr[i]:0xf) + ((arr[i] < 10)?'0':('a' - 0xa));
 	}
 	print((char *)packet);
 	print(ENDL);
@@ -664,8 +674,15 @@ int main(void)
 	  do_led();
 	  do_fram_test();
 	  do_microrl();
-	  if (do_nrf_scan(0) || do_buttons_and_nrf())
+	  if (do_nrf_scan(0))
+	  {
+		  // last_active_time = HAL_GetTick();
+		  // disable display for long tests
+	  }
+	  else if (do_buttons_and_nrf())
+	  {
 		  last_active_time = HAL_GetTick();
+	  }
 
 	  // disable if inactive
 

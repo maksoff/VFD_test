@@ -73,6 +73,7 @@ bool do_nrf_scan(int8_t command);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint32_t last_active_time;
+bool active_berserk = false;
 
 void active(void)
 {
@@ -81,7 +82,7 @@ void active(void)
 
 enum
 {
-    NRF_CHANNEL = 123,
+    NRF_CHANNEL = 111,
     NRF_POWER_UP_DELAY = 2,
     NRF_PAYLOAD_LENGTH = 10,
     NRF_RETRANSMITS = 5,
@@ -431,9 +432,8 @@ bool do_buttons_and_nrf(void)
 				nrf24l01p_clear_irq_flag(NRF24L01P_IRQ_MAX_RT);
 				nrf24l01p_flush_tx();
 
-				/*
 				uint32_t but_hold = HAL_GetTick();
-				while(PB1||PB2)
+				while(active_berserk && (PB1 || PB2))
 				{
 					if (HAL_GetTick() - but_hold > 2000)
 					{
@@ -457,7 +457,6 @@ bool do_buttons_and_nrf(void)
 						HAL_GPIO_WritePin(nRF_CE_GPIO_Port, nRF_CE_Pin, 0);
 					}
 				}
-				*/
 				break;
 			}
 			if (HAL_GetTick() - timeout_cnt > 200)
@@ -673,7 +672,10 @@ int main(void)
   uint8_t test;
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
 
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
+  if (PB1 || PB2)
+	  active_berserk = true;
+  else
+	  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
   do_vfd_init();
 

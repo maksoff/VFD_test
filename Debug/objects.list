@@ -3,6 +3,8 @@
 "./Core/Src/microrl.o"
 "./Core/Src/microrl_cmd.o"
 "./Core/Src/nrf24l01p.o"
+"./Core/Src/nrff.o"
+"./Core/Src/nrff_secure.o"
 "./Core/Src/stm32f1xx_hal_msp.o"
 "./Core/Src/stm32f1xx_it.o"
 "./Core/Src/syscalls.o"

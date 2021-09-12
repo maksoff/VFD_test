@@ -10,6 +10,8 @@ C_SRCS += \
 ../Core/Src/microrl.c \
 ../Core/Src/microrl_cmd.c \
 ../Core/Src/nrf24l01p.c \
+../Core/Src/nrff.c \
+../Core/Src/nrff_secure.c \
 ../Core/Src/stm32f1xx_hal_msp.c \
 ../Core/Src/stm32f1xx_it.c \
 ../Core/Src/syscalls.c \
@@ -23,6 +25,8 @@ OBJS += \
 ./Core/Src/microrl.o \
 ./Core/Src/microrl_cmd.o \
 ./Core/Src/nrf24l01p.o \
+./Core/Src/nrff.o \
+./Core/Src/nrff_secure.o \
 ./Core/Src/stm32f1xx_hal_msp.o \
 ./Core/Src/stm32f1xx_it.o \
 ./Core/Src/syscalls.o \
@@ -36,6 +40,8 @@ C_DEPS += \
 ./Core/Src/microrl.d \
 ./Core/Src/microrl_cmd.d \
 ./Core/Src/nrf24l01p.d \
+./Core/Src/nrff.d \
+./Core/Src/nrff_secure.d \
 ./Core/Src/stm32f1xx_hal_msp.d \
 ./Core/Src/stm32f1xx_it.d \
 ./Core/Src/syscalls.d \

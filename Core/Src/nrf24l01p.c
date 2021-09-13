@@ -225,7 +225,16 @@ void nrf24l01p_set_output_power(nrf24l01p_output_power_t power)
 
 void nrf24l01p_set_datarate(nrf24l01p_datarate_t datarate)
 {
-  nrf24l01p_write_reg(NRF24L01P_CONFIG, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR, datarate != NRF24L01P_1MBPS));
+  if (datarate == NRF24L01P_250KBPS)
+  {
+	nrf24l01p_write_reg(NRF24L01P_CONFIG, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR_LOW, 1));
+	nrf24l01p_write_reg(NRF24L01P_CONFIG, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR, 0));
+
+  }
+  else
+  {
+    nrf24l01p_write_reg(NRF24L01P_CONFIG, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR, datarate != NRF24L01P_1MBPS));
+  }
 }
 
 uint8_t nrf24l01p_get_operation_mode(void)
@@ -250,6 +259,8 @@ uint8_t nrf24l01p_get_output_power(void)
 
 uint8_t nrf24l01p_get_datarate(void)
 {
+  if (nrf24l01p_read_reg(NRF24L01P_RF_SETUP) & (1<<NRF24L01P_RF_SETUP_RF_DR_LOW))
+	  return NRF24L01P_250KBPS;
   return (nrf24l01p_read_reg(NRF24L01P_RF_SETUP) & (1<<NRF24L01P_RF_SETUP_RF_DR)) >> NRF24L01P_RF_SETUP_RF_DR;
 }
 

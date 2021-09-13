@@ -28,7 +28,8 @@ Core/Src/nrff.o: ../Core/Src/nrff.c ../Core/Inc/nrff.h ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pcd.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_ll_usb.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pcd_ex.h \
- ../Core/Inc/nrff_secure.h
+ ../Core/Inc/nrff_secure.h ../Core/Inc/nrf24l01p.h \
+ ../Core/Inc/nrf24l01p_reg.h
 
 ../Core/Inc/nrff.h:
 
@@ -93,3 +94,7 @@ Core/Src/nrff.o: ../Core/Src/nrff.c ../Core/Inc/nrff.h ../Core/Inc/main.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pcd_ex.h:
 
 ../Core/Inc/nrff_secure.h:
+
+../Core/Inc/nrf24l01p.h:
+
+../Core/Inc/nrf24l01p_reg.h:

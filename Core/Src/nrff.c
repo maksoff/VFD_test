@@ -8,6 +8,8 @@
 #include "nrff.h"
 #include "nrff_secure.h"
 
+#include "nrf24l01p.h"
+
 void xtea_encipher(uint32_t *v);
 void xtea_decipher(uint32_t *v);
 

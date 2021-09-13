@@ -118,7 +118,8 @@ typedef enum {
  */
 typedef enum {
     NRF24L01P_1MBPS,          /**< Datarate set to 1 Mbps  */
-    NRF24L01P_2MBPS           /**< Datarate set to 2 Mbps  */
+    NRF24L01P_2MBPS,          /**< Datarate set to 2 Mbps  */
+	NRF24L01P_250KBPS		  /**< Datarate set to 250 kbps  */
 } nrf24l01p_datarate_t;
 
 /** An enum describing the radio's PLL mode.
@@ -216,6 +217,7 @@ enum
 /** @name RF_SETUP register bit definitions */
 //@{
 	NRF24L01P_RF_SETUP_CONT_WAVE = 7,	  /**< RF_SETUP register bit 7 */
+    NRF24L01P_RF_SETUP_RF_DR_LOW = 5,     /**< RF_SETUP register bit 5 */
     NRF24L01P_RF_SETUP_PLL_LOCK  = 4,     /**< RF_SETUP register bit 4 */
     NRF24L01P_RF_SETUP_RF_DR     = 3,     /**< RF_SETUP register bit 3 */
     NRF24L01P_RF_SETUP_RF_PWR1   = 2,     /**< RF_SETUP register bit 2 */

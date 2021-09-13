@@ -1,0 +1,14 @@
+microrl_cmd.c:106:6:microrl_print_char	16	static
+microrl_cmd.c:111:6:print	24	static
+microrl_cmd.c:124:5:find_color_by_name	24	static
+microrl_cmd.c:136:5:print_color	16	static
+microrl_cmd.c:144:5:str_length	24	static
+microrl_cmd.c:153:5:print_help	40	static
+microrl_cmd.c:203:5:execute	48	static
+microrl_cmd.c:274:9:complet	56	static
+microrl_cmd.c:344:6:init_microrl	8	static
+microrl_cmd.c:359:5:clear_screen	16	static
+microrl_cmd.c:366:5:color_toggle	16	static
+microrl_cmd.c:372:5:color_on	16	static
+microrl_cmd.c:380:5:color_off	16	static
+microrl_cmd.c:388:5:color_show	16	static

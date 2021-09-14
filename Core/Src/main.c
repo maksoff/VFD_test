@@ -86,12 +86,7 @@ enum
     NRF_POWER_UP_DELAY = 2,
     NRF_PAYLOAD_LENGTH = 32,
     NRF_RETRANSMITS = 5,
-
-    #if RF_PAYLOAD_LENGTH <= 18
-        NRF_RETRANSMIT_DELAY = 250
-    #else
-        NRF_RETRANSMIT_DELAY = 500
-    #endif
+    NRF_RETRANSMIT_DELAY = 500
 };
 
 uint8_t address[5] = { 0x31, 0x41, 0x59, 0x26, 0x56 };
@@ -118,6 +113,8 @@ void nrf_init_tx(uint8_t *address)
     nrf24l01p_close_pipe(NRF24L01P_ALL);
     nrf24l01p_open_pipe(NRF24L01P_TX, true);
 
+    nrf24l01p_set_datarate(NRF24L01P_250KBPS);
+
     nrf24l01p_set_auto_retr(NRF_RETRANSMITS, NRF_RETRANSMIT_DELAY);
     nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
     nrf24l01p_set_address(NRF24L01P_PIPE0, address);
@@ -137,6 +134,9 @@ void nrf_init_rx(uint8_t *address)
     nrf24l01p_get_clear_irq_flags();
     nrf24l01p_close_pipe(NRF24L01P_ALL);
     nrf24l01p_open_pipe(NRF24L01P_PIPE0, true);
+
+    nrf24l01p_set_datarate(NRF24L01P_250KBPS);
+
     nrf24l01p_set_crc_mode(NRF24L01P_CRC_16BIT);
     nrf24l01p_set_address_width(NRF24L01P_AW_5BYTES);
     nrf24l01p_set_address(NRF24L01P_PIPE0, address);

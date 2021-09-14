@@ -227,8 +227,8 @@ void nrf24l01p_set_datarate(nrf24l01p_datarate_t datarate)
 {
   if (datarate == NRF24L01P_250KBPS)
   {
-	nrf24l01p_write_reg(NRF24L01P_CONFIG, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR_LOW, 1));
-	nrf24l01p_write_reg(NRF24L01P_CONFIG, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR, 0));
+	nrf24l01p_write_reg(NRF24L01P_RF_SETUP, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR_LOW, 1));
+	nrf24l01p_write_reg(NRF24L01P_RF_SETUP, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_RF_SETUP_RF_DR, 0));
 
   }
   else

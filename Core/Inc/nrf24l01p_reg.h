@@ -25,6 +25,7 @@ typedef enum
 //@{
 /* nRF24L01 Instruction Definitions */
 
+    NRF24L01P_NRF_READ_REG        = 0x00,  /**< Register read command */
     NRF24L01P_NRF_WRITE_REG       = 0x20,  /**< Register write command */
     NRF24L01P_RD_RX_PAYLOAD_WIDTH = 0x60,  /**< Read RX payload command */
     NRF24L01P_RD_RX_PAYLOAD       = 0x61,  /**< Read RX payload command */
@@ -34,8 +35,7 @@ typedef enum
     NRF24L01P_FLUSH_TX            = 0xE1,  /**< Flush TX register command */
     NRF24L01P_FLUSH_RX            = 0xE2,  /**< Flush RX register command */
     NRF24L01P_REUSE_TX_PL         = 0xE3,  /**< Reuse TX payload command */
-    NRF24L01P_LOCK_UNLOCK         = 0x50,  /**< Lock/unlcok exclusive features */
-    NRF24L01P_NOP                 = 0xFF,  /**< No Operation command, used for reading status register */
+	NRF24L01P_NOP                 = 0xFF,  /**< No Operation command, used for reading status register */
 //@}
 } nrf24l01p_command_t;
 

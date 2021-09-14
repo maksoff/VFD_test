@@ -373,6 +373,8 @@ uint8_t nrf24l01p_read_rx_fifo_payload_width()
   return temp;
 }
 
+/*
+ *  wtf? not mentioned in datasheet
 void nrf24l01p_lock_unlock()
 {
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_LOW);
@@ -382,6 +384,7 @@ void nrf24l01p_lock_unlock()
 
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
 }
+ */
 
 uint8_t nrf24l01p_get_rx_data_source(void)
 {
@@ -430,6 +433,9 @@ nrf24l01p_pll_mode_t nrf24l01p_get_pll_mode(void)
   return (nrf24l01p_pll_mode_t)((nrf24l01p_read_reg(NRF24L01P_RF_SETUP) & (1<<NRF24L01P_PLL_LOCK)) >> NRF24L01P_PLL_LOCK);
 }
 
+/*
+ * used in nRF24L01 without +
+ */
 void nrf24l01p_set_lna_gain(nrf24l01p_lna_mode_t lna_gain)
 {
   nrf24l01p_write_reg(NRF24L01P_RF_SETUP, BIT_COND(nrf24l01p_read_reg(NRF24L01P_RF_SETUP), NRF24L01P_LNA_HCURR, lna_gain == NRF24L01P_LNA_HCURR));

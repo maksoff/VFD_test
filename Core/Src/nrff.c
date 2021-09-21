@@ -19,9 +19,10 @@ const uint32_t DELTA = 0x9e3779b9;
  */
 void xxtea_encipher(uint32_t *v, uint8_t n)
 {
+	const uint32_t *key = nrff_x.KEY;
 	uint32_t y, z, sum;
 	uint32_t p, rounds, e;
-	rounds = 6 + 52/n;
+	rounds = 6 + 52/n; // if more than 212 bytes, increase rounds to 8
 	sum = 0;
 	z = v[n-1];
 	do {
@@ -41,6 +42,7 @@ void xxtea_encipher(uint32_t *v, uint8_t n)
  */
 void xxtea_decipher(uint32_t *v, uint8_t n)
 {
+	const uint32_t *key = nrff_x.KEY;
 	uint32_t y, z, sum;
 	uint32_t p, rounds, e;
 	rounds = 6 + 52/n;

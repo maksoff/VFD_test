@@ -27,23 +27,23 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000029  00000000  00000000  000201f4  2**0
                   CONTENTS, READONLY
- 12 .debug_info   000207e5  00000000  00000000  0002021d  2**0
+ 12 .debug_info   000207d2  00000000  00000000  0002021d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 000045be  00000000  00000000  00040a02  2**0
+ 13 .debug_abbrev 000045be  00000000  00000000  000409ef  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00001930  00000000  00000000  00044fc0  2**3
+ 14 .debug_aranges 00001928  00000000  00000000  00044fb0  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_ranges 000017b8  00000000  00000000  000468f0  2**3
+ 15 .debug_ranges 000017b0  00000000  00000000  000468d8  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  0001c586  00000000  00000000  000480a8  2**0
+ 16 .debug_macro  0001c586  00000000  00000000  00048088  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0001d30e  00000000  00000000  0006462e  2**0
+ 17 .debug_line   0001d2f3  00000000  00000000  0006460e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000943a0  00000000  00000000  0008193c  2**0
+ 18 .debug_str    0009438b  00000000  00000000  00081901  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000053  00000000  00000000  00115cdc  2**0
+ 19 .comment      00000053  00000000  00000000  00115c8c  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00006cc4  00000000  00000000  00115d30  2**2
+ 20 .debug_frame  00006ca8  00000000  00000000  00115ce0  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -7309,9 +7309,9 @@ uint8_t nrf24l01p_read_rx_fifo_payload_width()
  800319e:	bd80      	pop	{r7, pc}
 
 080031a0 <nrf24l01p_get_rx_data_source>:
-
   nrf24l01p_spi_ss(NRF24L01P_SPI_SS_HIGH);
 }
+ */
 
 uint8_t nrf24l01p_get_rx_data_source(void)
 {

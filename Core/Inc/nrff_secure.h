@@ -16,8 +16,7 @@
 typedef struct  {
     const uint8_t  CH;			// Radio Channel number, 0...125
     const uint8_t  ADDRESS[5];	// Default address
-    const uint32_t XTEA_KEY[4]; // key 4x32 bit  <- keep this really in secret!
-    const uint32_t XTEA_ROUNDS; // >= 32 recommended
+    const uint32_t KEY[4]; // key 4x32 bit  <- keep this really in secret!
 } NRFF_X;
 
 /**

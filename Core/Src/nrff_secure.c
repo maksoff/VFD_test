@@ -13,6 +13,5 @@
 const NRFF_X nrff_x = {
 		.CH = 111, 	// Radio Channel number, 0...125
 		.ADDRESS = { 0x31, 0x41, 0x59, 0x26, 0x56 },
-		.XTEA_KEY = {0x00112233, 0x44556677, 0x8899AABB, 0xCCDDEEFF}, // keep in secret!
-		.XTEA_ROUNDS = 32 // more than 32 recommended
+		.KEY = {0x00112233, 0x44556677, 0x8899AABB, 0xCCDDEEFF}, // keep in secret! never publish!
 };

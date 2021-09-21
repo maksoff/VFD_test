@@ -10,37 +10,52 @@
 
 #include "nrf24l01p.h"
 
-void xtea_encipher(uint32_t *v);
-void xtea_decipher(uint32_t *v);
+void xxtea_encipher(uint32_t *v, uint8_t n);
+void xxtea_decipher(uint32_t *v, uint8_t n);
+const uint32_t DELTA = 0x9e3779b9;
 
 /**
- * encodes 2x32bit block
+ * encodes 32bit blocks (min 2x)
  */
-void xtea_encipher(uint32_t *v) {
-    uint32_t i;
-    const uint32_t num_rounds = nrff_x.XTEA_ROUNDS;
-    const uint32_t *k = nrff_x.XTEA_KEY;
-    uint32_t v0=v[0], v1=v[1], sum=0, delta=0x9E3779B9;
-    for (i=0; i < num_rounds; i++) {
-        v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + k[sum & 3]);
-        sum += delta;
-        v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + k[(sum>>11) & 3]);
-    }
-    v[0]=v0; v[1]=v1;
+void xxtea_encipher(uint32_t *v, uint8_t n)
+{
+	uint32_t y, z, sum;
+	uint32_t p, rounds, e;
+	rounds = 6 + 52/n;
+	sum = 0;
+	z = v[n-1];
+	do {
+		sum += DELTA;
+		e = (sum >> 2) & 3;
+		for (p=0; p<n-1; p++) {
+			y = v[p+1];
+			z = v[p] += (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)));
+		}
+		y = v[0];
+		z = v[n-1] += (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)));
+	} while (--rounds);
 }
 
 /**
- * decodes 2x32bit block
+ * decodes 32bit blocks (min 2x)
  */
-void xtea_decipher(uint32_t *v) {
-    uint32_t i;
-    const uint32_t num_rounds = nrff_x.XTEA_ROUNDS;
-    const uint32_t *k = nrff_x.XTEA_KEY;
-    uint32_t v0=v[0], v1=v[1], delta=0x9E3779B9, sum=delta*num_rounds;
-    for (i=0; i < num_rounds; i++) {
-        v1 -= (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + k[(sum>>11) & 3]);
-        sum -= delta;
-        v0 -= (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + k[sum & 3]);
-    }
-    v[0]=v0; v[1]=v1;
+void xxtea_decipher(uint32_t *v, uint8_t n)
+{
+	uint32_t y, z, sum;
+	uint32_t p, rounds, e;
+	rounds = 6 + 52/n;
+	sum = rounds*DELTA;
+	y = v[0];
+	do {
+		e = (sum >> 2) & 3;
+		for (p=n-1; p>0; p--) {
+			z = v[p-1];
+			y = v[p] -= (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)));
+		}
+		z = v[n-1];
+		y = v[0] -= (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)));
+		sum -= DELTA;
+	} while (--rounds);
 }
+
+

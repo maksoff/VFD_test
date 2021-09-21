@@ -612,12 +612,14 @@ Discarded input sections
  .text          0x0000000000000000        0x0 ./Core/Src/nrff.o
  .data          0x0000000000000000        0x0 ./Core/Src/nrff.o
  .bss           0x0000000000000000        0x0 ./Core/Src/nrff.o
+ .rodata.version
+                0x0000000000000000        0x1 ./Core/Src/nrff.o
  .rodata.DELTA  0x0000000000000000        0x4 ./Core/Src/nrff.o
  .text.xxtea_encipher
                 0x0000000000000000      0x13c ./Core/Src/nrff.o
  .text.xxtea_decipher
                 0x0000000000000000      0x12c ./Core/Src/nrff.o
- .debug_info    0x0000000000000000      0x33a ./Core/Src/nrff.o
+ .debug_info    0x0000000000000000      0x34c ./Core/Src/nrff.o
  .debug_abbrev  0x0000000000000000      0x154 ./Core/Src/nrff.o
  .debug_aranges
                 0x0000000000000000       0x28 ./Core/Src/nrff.o
@@ -665,7 +667,7 @@ Discarded input sections
  .debug_macro   0x0000000000000000       0x22 ./Core/Src/nrff.o
  .debug_macro   0x0000000000000000       0x64 ./Core/Src/nrff.o
  .debug_line    0x0000000000000000      0x913 ./Core/Src/nrff.o
- .debug_str     0x0000000000000000    0x8708d ./Core/Src/nrff.o
+ .debug_str     0x0000000000000000    0x87095 ./Core/Src/nrff.o
  .comment       0x0000000000000000       0x54 ./Core/Src/nrff.o
  .debug_frame   0x0000000000000000       0x68 ./Core/Src/nrff.o
  .ARM.attributes

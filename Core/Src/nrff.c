@@ -7,12 +7,21 @@
 
 #include "nrff.h"
 #include "nrff_secure.h"
-
 #include "nrf24l01p.h"
+
+const uint8_t version = 0x01; // first version
 
 void xxtea_encipher(uint32_t *v, uint8_t n);
 void xxtea_decipher(uint32_t *v, uint8_t n);
 const uint32_t DELTA = 0x9e3779b9;
+
+typedef struct  {
+	uint8_t  version;	// protocol version
+	uint8_t  dir_size;	// DONW | SERVICE | MULTIPACKET | DATA_SIZE[5]
+	uint16_t msg_cnt_id;// COUNTER[4] | MESSAGE_ID[12]
+	uint32_t nonce; 	// 32 bits
+	uint8_t  data[24];	// 24 bytes max in one packet (total packet size 32 bytes)
+} NRFF_PACKET;
 
 /**
  * encodes 32bit blocks (min 2x)

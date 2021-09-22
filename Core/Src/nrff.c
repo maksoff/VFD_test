@@ -23,6 +23,11 @@ typedef struct  {
 	uint8_t  data[24];	// 24 bytes max in one packet (total packet size 32 bytes)
 } NRFF_PACKET;
 
+#define DS_DOWN(x) 		  (x & (1<<7)) /*< Is packet going "down" the tree */
+#define DS_SERVICE(x) 	  (x & (1<<6)) /*< This message used for library purpose */
+#define DS_MULTIPACKET(x) (x & (1<<5)) /*< This message is part of multipacket message */
+#define DS_SIZE(x) 		  (x & 0b11111) /*< Number of bytes in packet */
+
 /**
  * encodes 32bit blocks (min 2x)
  */

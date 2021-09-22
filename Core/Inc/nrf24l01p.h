@@ -557,11 +557,14 @@ nrf24l01p_pll_mode_t nrf24l01p_get_pll_mode(void);
  * Use this function to either use HI
  * current or LOW current mode for the radio.
  *
+ * USED IN nRF24L01 without +
+ *
  * @param lna_gain LNA gain mode
 */
 void nrf24l01p_set_lna_gain(nrf24l01p_lna_mode_t lna_gain);
 
 /** Get LNA gain mode.
+ * USED IN nRF24L01 without +
  * Use this function to get the radio's
  * current LNA gain mode.
  *

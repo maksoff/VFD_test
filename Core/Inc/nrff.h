@@ -10,4 +10,9 @@
 
 #include "main.h"
 
+/**
+ * user must define this function. Recommended to use sys timer
+ */
+uint32_t nrff_get_nonce(void);
+
 #endif /* INC_NRFF_H_ */

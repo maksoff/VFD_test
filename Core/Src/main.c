@@ -72,6 +72,12 @@ bool do_nrf_scan(int8_t command);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+nrff_get_nonce()
+{
+	return HAL_GetTick();
+}
+
 uint32_t last_active_time;
 bool active_berserk = false;
 

@@ -28,6 +28,30 @@ typedef struct  {
 #define DS_MULTIPACKET(x) (x & (1<<5)) /*< This message is part of multipacket message */
 #define DS_SIZE(x) 		  (x & 0b11111) /*< Number of bytes in packet */
 
+
+/********* nRFF user functions *******/
+
+/**
+ * sends multiple requests for the packet
+ */
+// is this really good idea? what if at this time server will transmit something?
+int nrff_request_n(uint16_t* message_ids, uint16_t count)
+{
+	int error = 0;
+	for (int i = 0; i < count; i++)
+	{
+		error = nrff_request(message_ids[count]);
+		if (error != 0)
+		{
+			return error;
+		}
+	}
+	return error;
+}
+
+
+/*********** SECURITY ***************/
+
 /**
  * encodes 32bit blocks (min 2x)
  */
@@ -74,4 +98,11 @@ void xxtea_decipher(uint32_t *v, uint8_t n)
 	} while (--rounds);
 }
 
+/***** this functions should be redefined ******/
 
+__weak void nrff_process(uint8_t * data, uint8_t size)
+{
+	// to avoid warnings
+	(void*)data;
+	(void)size;
+}

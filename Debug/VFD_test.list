@@ -27,23 +27,23 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000029  00000000  00000000  000201f4  2**0
                   CONTENTS, READONLY
- 12 .debug_info   000207d2  00000000  00000000  0002021d  2**0
+ 12 .debug_info   000207e9  00000000  00000000  0002021d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 000045be  00000000  00000000  000409ef  2**0
+ 13 .debug_abbrev 000045da  00000000  00000000  00040a06  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00001928  00000000  00000000  00044fb0  2**3
+ 14 .debug_aranges 00001930  00000000  00000000  00044fe0  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_ranges 000017b0  00000000  00000000  000468d8  2**3
+ 15 .debug_ranges 000017b8  00000000  00000000  00046910  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  0001c586  00000000  00000000  00048088  2**0
+ 16 .debug_macro  0001c5a5  00000000  00000000  000480c8  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0001d2f3  00000000  00000000  0006460e  2**0
+ 17 .debug_line   0001d315  00000000  00000000  0006466d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    0009438b  00000000  00000000  00081901  2**0
+ 18 .debug_str    000943db  00000000  00000000  00081982  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000053  00000000  00000000  00115c8c  2**0
+ 19 .comment      00000053  00000000  00000000  00115d5d  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00006ca8  00000000  00000000  00115ce0  2**2
+ 20 .debug_frame  00006cc4  00000000  00000000  00115db0  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -252,7 +252,7 @@ uint32_t fifo_length(void)
  8000268:	20000210 	.word	0x20000210
 
 0800026c <active>:
-/* USER CODE BEGIN 0 */
+
 uint32_t last_active_time;
 bool active_berserk = false;
 
@@ -817,7 +817,7 @@ void do_led(void)
  80005fc:	2000021c 	.word	0x2000021c
  8000600:	40011000 	.word	0x40011000
 
-08000604 <read.9150>:
+08000604 <read.9168>:
 
 void do_fram_test(void)
 {
@@ -838,15 +838,15 @@ void do_fram_test(void)
  800061c:	2301      	movs	r3, #1
  800061e:	2242      	movs	r2, #66	; 0x42
  8000620:	21a0      	movs	r1, #160	; 0xa0
- 8000622:	480f      	ldr	r0, [pc, #60]	; (8000660 <read.9150+0x5c>)
+ 8000622:	480f      	ldr	r0, [pc, #60]	; (8000660 <read.9168+0x5c>)
  8000624:	f004 f84e 	bl	80046c4 <HAL_I2C_Mem_Read>
 		if (temp != 0x42)
  8000628:	7bfb      	ldrb	r3, [r7, #15]
  800062a:	2b42      	cmp	r3, #66	; 0x42
- 800062c:	d001      	beq.n	8000632 <read.9150+0x2e>
+ 800062c:	d001      	beq.n	8000632 <read.9168+0x2e>
 			return false;
  800062e:	2300      	movs	r3, #0
- 8000630:	e012      	b.n	8000658 <read.9150+0x54>
+ 8000630:	e012      	b.n	8000658 <read.9168+0x54>
 		HAL_I2C_Mem_Read(&hi2c1, 0b10100010, 0x5A, 1, &temp, 1, 10);
  8000632:	230a      	movs	r3, #10
  8000634:	9302      	str	r3, [sp, #8]
@@ -857,15 +857,15 @@ void do_fram_test(void)
  8000640:	2301      	movs	r3, #1
  8000642:	225a      	movs	r2, #90	; 0x5a
  8000644:	21a2      	movs	r1, #162	; 0xa2
- 8000646:	4806      	ldr	r0, [pc, #24]	; (8000660 <read.9150+0x5c>)
+ 8000646:	4806      	ldr	r0, [pc, #24]	; (8000660 <read.9168+0x5c>)
  8000648:	f004 f83c 	bl	80046c4 <HAL_I2C_Mem_Read>
 		if (temp != 0xA5)
  800064c:	7bfb      	ldrb	r3, [r7, #15]
  800064e:	2ba5      	cmp	r3, #165	; 0xa5
- 8000650:	d001      	beq.n	8000656 <read.9150+0x52>
+ 8000650:	d001      	beq.n	8000656 <read.9168+0x52>
 			return false;
  8000652:	2300      	movs	r3, #0
- 8000654:	e000      	b.n	8000658 <read.9150+0x54>
+ 8000654:	e000      	b.n	8000658 <read.9168+0x54>
 		return true;
  8000656:	2301      	movs	r3, #1
 	}
@@ -955,7 +955,7 @@ void do_fram_test(void)
 		if (read())
  80006fe:	f507 7380 	add.w	r3, r7, #256	; 0x100
  8000702:	469c      	mov	ip, r3
- 8000704:	f7ff ff7e 	bl	8000604 <read.9150>
+ 8000704:	f7ff ff7e 	bl	8000604 <read.9168>
  8000708:	4603      	mov	r3, r0
  800070a:	2b00      	cmp	r3, #0
  800070c:	d008      	beq.n	8000720 <do_fram_test+0xbc>
@@ -978,14 +978,14 @@ void do_fram_test(void)
 			write();
  8000726:	f507 7380 	add.w	r3, r7, #256	; 0x100
  800072a:	469c      	mov	ip, r3
- 800072c:	f000 f87c 	bl	8000828 <write.9154>
+ 800072c:	f000 f87c 	bl	8000828 <write.9172>
 			HAL_Delay(500);
  8000730:	f44f 70fa 	mov.w	r0, #500	; 0x1f4
  8000734:	f003 fa8a 	bl	8003c4c <HAL_Delay>
 			if (read())
  8000738:	f507 7380 	add.w	r3, r7, #256	; 0x100
  800073c:	469c      	mov	ip, r3
- 800073e:	f7ff ff61 	bl	8000604 <read.9150>
+ 800073e:	f7ff ff61 	bl	8000604 <read.9168>
  8000742:	4603      	mov	r3, r0
  8000744:	2b00      	cmp	r3, #0
  8000746:	d008      	beq.n	800075a <do_fram_test+0xf6>
@@ -1105,7 +1105,7 @@ void do_fram_test(void)
  8000820:	0800d1a4 	.word	0x0800d1a4
  8000824:	2000065c 	.word	0x2000065c
 
-08000828 <write.9154>:
+08000828 <write.9172>:
 	{
  8000828:	b580      	push	{r7, lr}
  800082a:	b088      	sub	sp, #32
@@ -1124,7 +1124,7 @@ void do_fram_test(void)
  8000844:	2301      	movs	r3, #1
  8000846:	2242      	movs	r2, #66	; 0x42
  8000848:	21a0      	movs	r1, #160	; 0xa0
- 800084a:	480b      	ldr	r0, [pc, #44]	; (8000878 <write.9154+0x50>)
+ 800084a:	480b      	ldr	r0, [pc, #44]	; (8000878 <write.9172+0x50>)
  800084c:	f003 fe40 	bl	80044d0 <HAL_I2C_Mem_Write>
 		temp = 0xA5;
  8000850:	23a5      	movs	r3, #165	; 0xa5
@@ -1139,7 +1139,7 @@ void do_fram_test(void)
  8000862:	2301      	movs	r3, #1
  8000864:	225a      	movs	r2, #90	; 0x5a
  8000866:	21a2      	movs	r1, #162	; 0xa2
- 8000868:	4803      	ldr	r0, [pc, #12]	; (8000878 <write.9154+0x50>)
+ 8000868:	4803      	ldr	r0, [pc, #12]	; (8000878 <write.9172+0x50>)
  800086a:	f003 fe31 	bl	80044d0 <HAL_I2C_Mem_Write>
 	}
  800086e:	bf00      	nop

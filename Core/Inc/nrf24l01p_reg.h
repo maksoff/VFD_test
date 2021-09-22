@@ -25,6 +25,7 @@ typedef enum
 //@{
 /* nRF24L01 Instruction Definitions */
 
+    NRF24L01P_NRF_READ_REG        = 0x00,  /**< Register read command */
     NRF24L01P_NRF_WRITE_REG       = 0x20,  /**< Register write command */
     NRF24L01P_RD_RX_PAYLOAD_WIDTH = 0x60,  /**< Read RX payload command */
     NRF24L01P_RD_RX_PAYLOAD       = 0x61,  /**< Read RX payload command */
@@ -34,8 +35,7 @@ typedef enum
     NRF24L01P_FLUSH_TX            = 0xE1,  /**< Flush TX register command */
     NRF24L01P_FLUSH_RX            = 0xE2,  /**< Flush RX register command */
     NRF24L01P_REUSE_TX_PL         = 0xE3,  /**< Reuse TX payload command */
-    NRF24L01P_LOCK_UNLOCK         = 0x50,  /**< Lock/unlcok exclusive features */
-    NRF24L01P_NOP                 = 0xFF,  /**< No Operation command, used for reading status register */
+	NRF24L01P_NOP                 = 0xFF,  /**< No Operation command, used for reading status register */
 //@}
 } nrf24l01p_command_t;
 
@@ -118,7 +118,8 @@ typedef enum {
  */
 typedef enum {
     NRF24L01P_1MBPS,          /**< Datarate set to 1 Mbps  */
-    NRF24L01P_2MBPS           /**< Datarate set to 2 Mbps  */
+    NRF24L01P_2MBPS,          /**< Datarate set to 2 Mbps  */
+	NRF24L01P_250KBPS		  /**< Datarate set to 250 kbps  */
 } nrf24l01p_datarate_t;
 
 /** An enum describing the radio's PLL mode.
@@ -216,6 +217,7 @@ enum
 /** @name RF_SETUP register bit definitions */
 //@{
 	NRF24L01P_RF_SETUP_CONT_WAVE = 7,	  /**< RF_SETUP register bit 7 */
+    NRF24L01P_RF_SETUP_RF_DR_LOW = 5,     /**< RF_SETUP register bit 5 */
     NRF24L01P_RF_SETUP_PLL_LOCK  = 4,     /**< RF_SETUP register bit 4 */
     NRF24L01P_RF_SETUP_RF_DR     = 3,     /**< RF_SETUP register bit 3 */
     NRF24L01P_RF_SETUP_RF_PWR1   = 2,     /**< RF_SETUP register bit 2 */

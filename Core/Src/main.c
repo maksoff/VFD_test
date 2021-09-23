@@ -30,6 +30,8 @@
 #include "microrl_cmd.h"
 #include "fifo.h"
 
+#include "nrff.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -73,7 +75,7 @@ bool do_nrf_scan(int8_t command);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-nrff_get_nonce()
+uint32_t nrff_get_tick()
 {
 	return HAL_GetTick();
 }

@@ -1,2 +1,4 @@
-nrff.c:29:6:xxtea_encipher	48	static
-nrff.c:52:6:xxtea_decipher	48	static
+nrff.c:38:5:nrff_request_n	24	static
+nrff.c:58:6:xxtea_encipher	48	static
+nrff.c:81:6:xxtea_decipher	48	static
+nrff.c:103:13:nrff_process	16	static

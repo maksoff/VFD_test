@@ -6,9 +6,9 @@ To ease the work with nRF modules, additional nRFF project will be implemented.
 Idea of this project to combine some ideas and create lightweight **secure** *mesh* (or, dynamic-tree) network, with MQTT-like interface.
 
 ## Targets:
-* Security (with modern SDR packets without any protection can be easily decoded)
-	+ `nonce` to prevent replay attack
-	+ XXTEA block coding - lightweight and secure for short packets
+* Security (with modern SDR, packets without any protection can be easily decoded)
+	+ *nonce* to prevent replay attack
+	+ *XXTEA* block coding - lightweight and secure for short packets
 * Message-based (like MQTT)
 	+ eliminated the need of knowing the exact module address & co
 	+ network can be easily extended with new modules

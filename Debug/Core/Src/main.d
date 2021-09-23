@@ -40,7 +40,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  ../Core/Inc/microrl_cmd.h ../Core/Inc/microrl.h \
- ../Core/Inc/microrl_config.h ../Core/Inc/fifo.h
+ ../Core/Inc/microrl_config.h ../Core/Inc/fifo.h ../Core/Inc/nrff.h
 
 ../Core/Inc/main.h:
 
@@ -137,3 +137,5 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/microrl_config.h:
 
 ../Core/Inc/fifo.h:
+
+../Core/Inc/nrff.h:
